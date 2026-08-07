@@ -158,9 +158,9 @@ export default function RepasPage() {
       {charge && !showForm && (
         <>
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-            <StatTile label="Repas à l'inventaire" valeur={repas.length} />
-            <StatTile label="Prix régulier moyen" valeur={`${prixMoyen} $`} />
-            <StatTile label="Restreints à des institutions" valeur={repas.filter((r) => r.institutions.length > 0).length} sousTexte="sur le total de l'inventaire" />
+            <StatTile label="À l'inventaire" valeur={repas.length} />
+            <StatTile label="Prix moyen" valeur={`${prixMoyen} $`} sousTexte="repas régulier" />
+            <StatTile label="Restreints" valeur={repas.filter((r) => r.institutions.length > 0).length} sousTexte="à des institutions" />
           </div>
 
           <div className="grid md:grid-cols-3 gap-4">

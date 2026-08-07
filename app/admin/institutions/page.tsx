@@ -57,7 +57,7 @@ export default function InstitutionsPage() {
           <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
             <StatTile label="Total" valeur={institutions.length} />
             <StatTile label="Actives" valeur={actives} sousTexte={`${institutions.length - actives} inactive(s)`} />
-            <StatTile label="Ajoutées ce mois-ci" valeur={institutions.filter((i) => {
+            <StatTile label="Ce mois-ci" valeur={institutions.filter((i) => {
               const d = new Date(i.createdAt);
               const now = new Date();
               return d.getMonth() === now.getMonth() && d.getFullYear() === now.getFullYear();
