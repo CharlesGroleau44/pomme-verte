@@ -3,6 +3,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { genererJourneesOuvrables } from '@/lib/menu-logic';
 
+export const dynamic = 'force-dynamic';
+
 export async function GET() {
   const menus = await prisma.menu.findMany({
     orderBy: { periodeDebut: 'desc' },
