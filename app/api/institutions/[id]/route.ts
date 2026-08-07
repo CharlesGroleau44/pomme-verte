@@ -2,13 +2,26 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
+const CHAMPS_FICHE = [
+  'nom', 'logoUrl', 'actif', 'adresse', 'ville', 'province', 'codePostal',
+  'telephone', 'courriel', 'siteWeb',
+  'personneContact', 'telephoneContact', 'courrielContact',
+  'notes',
+] as const;
+
+export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
+  const institution = await prisma.institution.findUnique({ where: { id: params.id } });
+  if (!institution) return NextResponse.json({ error: 'Institution introuvable.' }, { status: 404 });
+  return NextResponse.json(institution);
+}
+
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
 
   const data: Record<string, unknown> = {};
-  if ('nom' in body) data.nom = body.nom;
-  if ('logoUrl' in body) data.logoUrl = body.logoUrl;
-  if ('actif' in body) data.actif = body.actif;
+  for (const champ of CHAMPS_FICHE) {
+    if (champ in body) data[champ] = body[champ];
+  }
 
   const institution = await prisma.institution.update({
     where: { id: params.id },

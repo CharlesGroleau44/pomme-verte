@@ -4,6 +4,15 @@ import { prisma } from '@/lib/prisma';
 
 export const dynamic = 'force-dynamic';
 
+// Champs de la fiche institution — appliqués tels quels au create/update
+// (voir aussi [id]/route.ts pour le PATCH).
+const CHAMPS_FICHE = [
+  'logoUrl', 'adresse', 'ville', 'province', 'codePostal',
+  'telephone', 'courriel', 'siteWeb',
+  'personneContact', 'telephoneContact', 'courrielContact',
+  'notes',
+] as const;
+
 export async function GET() {
   const institutions = await prisma.institution.findMany({ orderBy: { nom: 'asc' } });
   return NextResponse.json(institutions);
@@ -16,12 +25,12 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Le nom de l\'institution est requis.' }, { status: 400 });
   }
 
-  const institution = await prisma.institution.create({
-    data: {
-      nom: body.nom,
-      logoUrl: body.logoUrl ?? null,
-    },
-  });
+  const data: Record<string, unknown> = { nom: body.nom };
+  for (const champ of CHAMPS_FICHE) {
+    if (champ in body) data[champ] = body[champ] || null;
+  }
+
+  const institution = await prisma.institution.create({ data });
 
   return NextResponse.json(institution, { status: 201 });
 }

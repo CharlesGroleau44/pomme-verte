@@ -18,11 +18,32 @@ datasource db {
 // institutions plus bas — liste vide = disponible pour toutes).
 // ------------------------------------------------------------------
 model Institution {
-  id        String   @id @default(cuid())
-  nom       String
-  logoUrl   String?
-  actif     Boolean  @default(true)
-  createdAt DateTime @default(now())
+  id                String   @id @default(cuid())
+  nom               String
+  logoUrl           String?
+  actif             Boolean  @default(true)
+
+  // Adresse
+  adresse           String?
+  ville             String?
+  province          String?  @default("QC")
+  codePostal        String?
+
+  // Coordonnées de l'institution
+  telephone         String?
+  courriel          String?
+  siteWeb           String?
+
+  // Personne contact
+  personneContact   String?
+  telephoneContact  String?
+  courrielContact   String?
+
+  // Notes libres
+  notes             String?
+
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @default(now()) @updatedAt
 
   menus     MenuInstitution[]
   repas     Repas[]

@@ -1,7 +1,7 @@
 'use client';
 // app/admin/repas/page.tsx
 import { useEffect, useState } from 'react';
-import ChampPhoto from './ChampPhoto';
+import ChampPhoto from '../ChampPhoto';
 
 type Repas = {
   id: string;

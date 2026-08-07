@@ -1,8 +1,8 @@
-// app/api/repas/photos/route.ts
-// Téléversement d'une photo de repas (principale ou l'une des deux
-// additionnelles). Retourne l'URL à stocker sur le Repas
-// (photoUrl / photoUrl2 / photoUrl3) — servie ensuite par
-// GET /api/photos/[filename].
+// app/api/upload/route.ts
+// Téléversement générique d'image — photos de repas (principale ou
+// additionnelles) ET logos d'institution. Retourne l'URL à stocker sur
+// le champ concerné (Repas.photoUrl* / Institution.logoUrl), servie
+// ensuite par GET /api/photos/[filename].
 import { NextRequest, NextResponse } from 'next/server';
 import { writeFile } from 'fs/promises';
 import path from 'path';
