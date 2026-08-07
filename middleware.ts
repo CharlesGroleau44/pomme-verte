@@ -15,6 +15,9 @@ export async function middleware(req: NextRequest) {
   return NextResponse.redirect(url);
 }
 
+// /menus (espace PUBLIC — ce que les parents voient, voir app/menus/) et
+// /api/photos (logos + photos de repas affichés sur ces pages publiques)
+// ne demandent jamais de connexion. Tout le reste passe par le login admin.
 export const config = {
-  matcher: ['/((?!_next/static|_next/image|favicon.ico|logo.jpeg|login|api/login).*)'],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|logo.jpeg|login|api/login|menus|api/photos).*)'],
 };
