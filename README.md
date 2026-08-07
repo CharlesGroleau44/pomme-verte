@@ -32,7 +32,13 @@ Ouvrir `http://localhost:3000` — redirige vers `/admin/menus`.
 3. **Duplication de menu** — décrite au §5 du briefing, non implémentée dans ce démarrage.
 4. **Gestion complète des écoles** — seule une route de lecture existe (`GET /api/ecoles`). CRUD complet (logo, actif/non actif) = module suivant.
 5. **Notifications UI** — les erreurs utilisent `alert()` en attendant une vraie composante de notification.
-6. **Auth** — aucune protection sur les routes `/admin/*` dans ce démarrage. À ajouter avant toute mise en ligne, même temporaire (mot de passe simple suffit pour ce module — l'authentification SMS est un bloc séparé).
+6. **Auth** — aucune protection applicative sur les routes `/admin/*` dans ce démarrage. Protégé pour l'instant par Basic Auth au niveau de Caddy (voir `DEPLOIEMENT-VPS.md`) le temps de la validation en ligne — une vraie authentification applicative reste à ajouter avant une mise en ligne définitive (l'authentification SMS est un bloc séparé).
+
+## En ligne (temporaire)
+
+**https://pommeverte.charlesgroleau.com** — hébergé sur le VPS OVH de Charles,
+Postgres natif, protégé par mot de passe. Voir `DEPLOIEMENT-VPS.md` pour le
+détail complet (infrastructure, déploiement, pièges appris).
 
 ## Décision à trancher avec Charles
 
