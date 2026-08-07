@@ -192,6 +192,54 @@ cette vérification : les libellés de stat tiles trop longs (« Ajoutées ce
 mois-ci », « Restreints à des institutions ») se faisaient tronquer à
 768px — raccourcis (« Ce mois-ci », « Restreints » + sous-texte).
 
+## Jusqu'à 2 repas par jour + espace public /menus (2026-08-07)
+
+Après un premier test réel de montage de menu, deux lacunes concrètes ont mené
+à une deuxième restructuration :
+
+**Modèle de données** — `MenuJournee.repasId` (un seul repas, pas de prix
+éditable) remplacé par un modèle enfant `MenuJourneeSelection` : une journée
+porte 0 à 2 sélections (au moins 1 requise pour que le menu soit complet),
+chacune avec ses propres overrides nom/description/**3 prix** (avant, seuls
+nom/description/photo étaient overridables — les prix ne l'étaient pas du
+tout, ni même affichés au montage). `@@unique([journeeId, repasId])` empêche
+de choisir deux fois le même repas la même journée; supprimer une sélection
+le rend à nouveau sélectionnable. Migration confirmée avec Charles
+(`--accept-data-loss` — 9 sélections de test perdues, aucune donnée réelle).
+
+Nouvelles routes : `POST /api/journees/[journeeId]/selections`,
+`PATCH`/`DELETE /api/selections/[selectionId]`. `/api/menus/[id]` PATCH ne
+gère plus que `seulementPourInstitutions`.
+
+**Espace public `/menus`** — la maquette existante du traiteur
+(`traiteurlapommeverte.com/votre-ecole/`) liste chaque institution avec son
+logo et un bouton vers son menu; on reproduit ce patron aux couleurs de la
+nouvelle plateforme, en Server Components Next.js (accès direct à Prisma,
+pas de détour par l'API) :
+- `/menus` — toutes les institutions actives, grosses cartes logo + bouton.
+- `/menus/[institutionId]` — les menus **publiés** (`MenuInstitution.publie
+  = true`) de cette institution seulement; un brouillon n'y apparaît jamais.
+- `/menus/[institutionId]/[menuId]` — le menu jour par jour en **lecture
+  seule**, filtré par `seulementPourInstitutions`. Vérifie que le lien
+  menu↔institution est bien publié avant d'afficher quoi que ce soit
+  (`notFound()` sinon) — un menuId deviné ne fuite rien.
+
+Le lien menu↔institution existait déjà (`MenuInstitution` + son
+`publie` par institution, posé dès la création du menu) — ce qui manquait
+était uniquement la page d'affichage public, pas l'architecture de données.
+
+`middleware.ts` exclut maintenant `/menus` (l'espace public) et
+`/api/photos` (logos et photos de repas, affichés sur ces pages publiques et
+donc plus protégeables par la connexion admin) de l'authentification
+obligatoire. Bouton **« Se connecter »** ajouté dans l'en-tête public
+(coin supérieur droit) — sert l'admin pour l'instant, prévu pour accueillir
+aussi les futurs comptes-parents (Phase 2, commandes en ligne).
+
+**Toujours sur `pommeverte.charlesgroleau.com`, pas encore sur
+`menus.traiteurlapommeverte.com`** (le domaine visé par la présentation de
+vente) — ce dernier appartient au client et nécessite un accès DNS que
+Charles n'a pas encore donné. À migrer quand ce sera confirmé.
+
 ## Restes à faire
 
 - **Sauvegarde de la base Postgres ET du dossier `data/photos/`** :
