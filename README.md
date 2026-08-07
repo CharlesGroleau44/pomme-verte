@@ -32,7 +32,7 @@ Ouvrir `http://localhost:3000` — redirige vers `/admin/menus`.
 3. **Duplication de menu** — décrite au §5 du briefing, non implémentée dans ce démarrage.
 4. **Gestion complète des écoles** — seule une route de lecture existe (`GET /api/ecoles`). CRUD complet (logo, actif/non actif) = module suivant.
 5. **Notifications UI** — les erreurs utilisent `alert()` en attendant une vraie composante de notification.
-6. **Auth** — aucune protection applicative sur les routes `/admin/*` dans ce démarrage. Protégé pour l'instant par Basic Auth au niveau de Caddy (voir `DEPLOIEMENT-VPS.md`) le temps de la validation en ligne — une vraie authentification applicative reste à ajouter avant une mise en ligne définitive (l'authentification SMS est un bloc séparé).
+6. **Auth** — écran de connexion ajouté (`/login`, identifiants `admin`/`admin` pour l'instant — voir `DEPLOIEMENT-VPS.md`), volontairement simple pour les démos. À durcir avant une mise en ligne définitive (mot de passe fort, hachage plutôt que comparaison en clair, éventuellement plusieurs comptes — l'authentification SMS est un bloc séparé).
 
 ## En ligne (temporaire)
 

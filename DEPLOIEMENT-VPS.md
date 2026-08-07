@@ -49,17 +49,30 @@ Pas de minuterie/cron : ce module n'a pas (encore) de tâche de fond.
   **nuage GRIS (DNS only)** obligatoire — sinon Caddy ne peut pas émettre le certificat.
 - Bloc dans `/etc/caddy/Caddyfile` : `reverse_proxy 127.0.0.1:3006`.
 
-## Protection temporaire (mot de passe)
+## Écran de connexion applicatif
 
-Le README du projet signale (« Ce qui reste à faire », point 6) qu'**aucune
-authentification applicative n'existe** dans ce démarrage et qu'il en faut une,
-même simple, avant toute mise en ligne. En attendant un vrai système d'auth côté
-app, la **totalité du site est protégée par Basic Auth au niveau de Caddy**
-(utilisateur `charles`, mot de passe généré — remis à Charles séparément, jamais
-stocké en clair dans ce dépôt). Hash bcrypt dans le bloc Caddy uniquement.
+Le README du projet signalait (« Ce qui reste à faire », point 6) qu'aucune
+authentification n'existait dans ce démarrage. Un premier écran de connexion a
+été ajouté le 2026-08-07 (identifiants **`admin` / `admin`** pour l'instant,
+délibérément simples pour les démos client) :
 
-**Ne pas considérer ceci comme suffisant pour une mise en ligne définitive** —
-c'est le verrou minimal pour un module encore en validation.
+- `middleware.ts` protège **tout** le site (sauf `/login`, `/api/login` et les
+  fichiers statiques) — redirection vers `/login` si le cookie de session est
+  absent ou invalide.
+- `lib/session.ts` signe le cookie `pv_session` par HMAC-SHA256 (Web Crypto,
+  compatible Node **et** Edge — donc utilisable à la fois dans les routes API
+  et dans `middleware.ts`, qui tourne en Edge runtime sous Next 14).
+- Identifiants et secret dans `pommeverte.env` : `ADMIN_USER`, `ADMIN_PASSWORD`,
+  `SESSION_SECRET`.
+- **La protection Basic Auth de Caddy a été retirée** le même jour — la garder
+  en plus de l'écran de connexion applicatif aurait affiché le popup gris natif
+  du navigateur AVANT la page brandée, ce qui allait à l'encontre de l'effet
+  recherché pour la démo cliente.
+
+**Toujours pas une authentification de production** — `admin`/`admin` est un
+mot de passe de démonstration. À durcir avant toute mise en ligne définitive
+(mot de passe fort, éventuellement plusieurs comptes, hachage du mot de passe
+plutôt qu'une comparaison en clair contre l'env).
 
 ## Mise à jour (nouvelle version)
 
