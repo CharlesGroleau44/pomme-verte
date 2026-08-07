@@ -135,6 +135,63 @@ n:n implicite Prisma `Repas.institutions` / `Institution.repas`) — **liste
 vide = disponible pour toutes**, même convention que
 `seulementPourInstitutions` sur les journées de menu.
 
+## Système de design (2026-08-07)
+
+Refonte visuelle demandée par Charles pour une interface « très haut de
+gamme » comparable aux meilleures applications SaaS, avec un tableau de bord
+par section.
+
+**Palette et typographie** — reprises telles quelles de
+`presentation-marketing-pomme-verte.html` (la présentation de vente du
+projet), pas inventées : crème `#FBFBF6` / encre `#16210F` / ramp vert
+séquentiel `apple-light #C7DE8E` → `apple-mid #8FC24A` → `apple-deep #3B8C47`
+→ `leaf #1B4A1E` → `leaf-deep #123512`, police **Nunito** (Google Fonts).
+Déclarées dans `tailwind.config.js` (`colors.pomme`, `colors.status`) —
+jamais de couleur Tailwind par défaut (`emerald-`, `gray-`, etc.) ailleurs
+dans `app/`.
+
+**Statuts** (`colors.status`) — validés avec le script du skill dataviz
+(`node scripts/validate_palette.js`) : `good` (vert marque) et `critical`
+(rouge) échouent le test d'adjacence CVD (paire rouge/vert classique,
+inhérente à presque tout système de statut) — mitigé en accompagnant
+**toujours** la couleur d'un texte (« Active »/« Inactive », jamais une
+pastille seule). `warning` (ambre) est bien distinct des deux autres.
+
+**Navigation** — sidebar fixe à gauche en bureau/tablette (`Sidebar.tsx`,
+verte foncée `leaf-deep`), remplacée sous `md` (768px) par une barre
+d'onglets fixe en bas (`NavMobile.tsx`) + en-tête compact (`TopBarMobile.tsx`)
+— même patron que les apps mobiles de Charles (NHCG, Couture). Icônes
+maison SVG trait (`Icones.tsx`), certaines reprises directement de la
+présentation de vente pour la continuité visuelle.
+
+**Tableaux de bord** (`app/admin/dashboard/`) — un par section
+(Institutions/Repas/Menus), au-dessus de la liste existante :
+- `StatTile.tsx` — chiffres proportionnels (jamais `tabular-nums`, réservé
+  aux colonnes alignées).
+- `TendanceHebdo.tsx` — graphique à colonnes SVG maison des entrées par
+  semaine (8 dernières semaines glissantes), suit le skill dataviz interne :
+  colonnes ≤24px à extrémité arrondie 4px/base carrée, gridlines hairline,
+  **une seule teinte donc pas de légende**, étiquette directe seulement sur
+  la dernière colonne, infobulle au survol **et au focus clavier** (chaque
+  colonne porte `role="img"` + `aria-label` — accessibilité ET point
+  d'ancrage fiable pour les tests). Aucune dépendance de charting ajoutée
+  (patron « maison » cohérent avec `CourbeMesure` chez NHCG).
+- `EntreesRecentes.tsx` — les 5 dernières entrées avec horodatage relatif
+  (`lib/dashboard.ts` : `relatif()`, `semainesRecentes()`).
+
+**Formulaires** — `ChampPhoto.tsx` (upload photo/logo) et `ChampsFiche.tsx`
+(fiche institution) restylés aux mêmes tokens; grilles responsives
+(`grid-cols-1 sm:grid-cols-3` etc.) pour un empilement propre en mobile.
+
+**Vérifié aux trois formats** (bureau, tablette 768px, mobile 375px) via le
+navigateur `Claude_Browser` (son `resize_window` gère un vrai changement de
+viewport — **`mcp__claude-in-chrome__resize_window` n'a pas fonctionné dans
+cette session** : la commande répond succès mais `window.innerWidth` ne
+bouge jamais, confirmé en rechargeant après coup). Un correctif est né de
+cette vérification : les libellés de stat tiles trop longs (« Ajoutées ce
+mois-ci », « Restreints à des institutions ») se faisaient tronquer à
+768px — raccourcis (« Ce mois-ci », « Restreints » + sous-texte).
+
 ## Restes à faire
 
 - **Sauvegarde de la base Postgres ET du dossier `data/photos/`** :

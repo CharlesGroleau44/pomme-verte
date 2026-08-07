@@ -25,6 +25,7 @@ Ouvrir `http://localhost:3000` — redirige vers `/admin/menus` (après connexio
 - API : `GET/POST /api/institutions`, `GET/PATCH/DELETE /api/institutions/[id]`
 - API : `GET/POST /api/menus`, `PATCH /api/menus/[id]` (assignation repas + override par journée), `POST /api/menus/[id]/publish`
 - Pages : `/admin/institutions` (liste) + `/admin/institutions/nouveau` + `/admin/institutions/[id]` (fiche complète : logo, adresse, coordonnées, personne contact, notes, dates création/modification, bandeau actif/inactif proéminent à bascule instantanée), `/admin/repas` (liste + création + édition, jusqu'à 3 photos, association à des institutions précises), `/admin/menus` (liste + publication par institution), `/admin/menus/nouveau` (création), `/admin/menus/[id]` (montage journée par journée)
+- **Système de design + tableaux de bord** (2026-08-07) — palette de marque (verte, tirée de la présentation officielle du projet), police Nunito, sidebar de navigation (barre d'onglets en bas sous `md`), et sur les 3 sections (Institutions/Repas/Menus) : stat tiles, graphique de tendance hebdomadaire (SVG maison, survol/focus avec infobulle, suit le skill dataviz interne), liste des entrées récentes. Voir `DEPLOIEMENT-VPS.md` § Système de design.
 
 ## Ce qui reste à faire (marqué `TODO Claude Code` dans le code)
 
