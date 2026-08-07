@@ -5,6 +5,8 @@ import { useRouter } from 'next/navigation';
 
 type Institution = { id: string; nom: string; actif: boolean };
 
+const INPUT = 'w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow';
+
 export default function NouveauMenuPage() {
   const router = useRouter();
   const [institutions, setInstitutions] = useState<Institution[]>([]);
@@ -48,49 +50,55 @@ export default function NouveauMenuPage() {
   };
 
   return (
-    <div className="max-w-lg space-y-4">
-      <h1 className="text-lg font-semibold">Nouveau menu</h1>
+    <div className="max-w-lg space-y-6">
+      <h1 className="text-2xl font-extrabold text-pomme-leaf-deep">Nouveau menu</h1>
 
-      <div className="grid grid-cols-2 gap-3">
-        <label className="block text-sm">
-          Date de début
-          <input type="date" value={debut} onChange={(e) => setDebut(e.target.value)} className="w-full border rounded px-3 py-2 text-sm mt-1" />
-        </label>
-        <label className="block text-sm">
-          Date de fin
-          <input type="date" value={fin} onChange={(e) => setFin(e.target.value)} className="w-full border rounded px-3 py-2 text-sm mt-1" />
-        </label>
-      </div>
-
-      <label className="block text-sm">
-        Thématique
-        <input value={thematique} onChange={(e) => setThematique(e.target.value)} className="w-full border rounded px-3 py-2 text-sm mt-1" />
-      </label>
-
-      <label className="block text-sm">
-        Date limite de commande
-        <input type="date" value={dateLimite} onChange={(e) => setDateLimite(e.target.value)} className="w-full border rounded px-3 py-2 text-sm mt-1" />
-      </label>
-
-      <div>
-        <span className="block text-sm mb-1">Institutions</span>
-        <div className="flex flex-wrap gap-2">
-          {institutions.filter((i) => i.actif).map((i) => (
-            <button
-              key={i.id}
-              type="button"
-              onClick={() => toggleInstitution(i.id)}
-              className={`px-3 py-1.5 rounded-full text-xs border ${institutionIds.includes(i.id) ? 'bg-emerald-800 text-white border-emerald-800' : 'bg-white border-gray-300'}`}
-            >
-              {i.nom}
-            </button>
-          ))}
+      <div className="bg-white rounded-2xl shadow-card p-6 space-y-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <label className="block text-sm font-medium text-pomme-ink/70">
+            Date de début
+            <input type="date" value={debut} onChange={(e) => setDebut(e.target.value)} className={INPUT} />
+          </label>
+          <label className="block text-sm font-medium text-pomme-ink/70">
+            Date de fin
+            <input type="date" value={fin} onChange={(e) => setFin(e.target.value)} className={INPUT} />
+          </label>
         </div>
-      </div>
 
-      <button onClick={creer} className="bg-emerald-800 text-white rounded-lg px-4 py-2 text-sm font-medium">
-        Créer le menu et générer les journées
-      </button>
+        <label className="block text-sm font-medium text-pomme-ink/70">
+          Thématique
+          <input value={thematique} onChange={(e) => setThematique(e.target.value)} className={INPUT} />
+        </label>
+
+        <label className="block text-sm font-medium text-pomme-ink/70">
+          Date limite de commande
+          <input type="date" value={dateLimite} onChange={(e) => setDateLimite(e.target.value)} className={INPUT} />
+        </label>
+
+        <div>
+          <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Institutions</span>
+          <div className="flex flex-wrap gap-2">
+            {institutions.filter((i) => i.actif).map((i) => (
+              <button
+                key={i.id}
+                type="button"
+                onClick={() => toggleInstitution(i.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  institutionIds.includes(i.id)
+                    ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
+                    : 'bg-white border-pomme-line/60 text-pomme-ink/70 hover:border-pomme-apple-deep'
+                }`}
+              >
+                {i.nom}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <button onClick={creer} className="bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors">
+          Créer le menu et générer les journées
+        </button>
+      </div>
     </div>
   );
 }

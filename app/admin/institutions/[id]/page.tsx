@@ -82,51 +82,51 @@ export default function FicheInstitutionPage({ params }: { params: { id: string 
 
   const fmt = (d: string) => new Date(d).toLocaleString('fr-CA', { dateStyle: 'long', timeStyle: 'short' });
 
-  if (!institution) return <p className="text-sm text-gray-500">Chargement…</p>;
+  if (!institution) return <p className="text-sm text-pomme-ink/40">Chargement…</p>;
 
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">{institution.nom}</h1>
-        <button onClick={supprimer} className="text-xs text-red-600 hover:underline">Supprimer</button>
+        <h1 className="text-2xl font-extrabold text-pomme-leaf-deep truncate">{institution.nom}</h1>
+        <button onClick={supprimer} className="text-xs font-medium text-status-critical hover:underline shrink-0">Supprimer</button>
       </div>
 
       {/* Bandeau Actif/Inactif — bien en évidence, bascule instantanée */}
       <button
         onClick={toggleActif}
-        className={`w-full flex items-center justify-between rounded-xl px-5 py-4 border-2 transition-colors ${
+        className={`w-full flex items-center justify-between rounded-2xl px-5 py-4 border-2 transition-colors ${
           institution.actif
-            ? 'bg-emerald-50 border-emerald-600'
-            : 'bg-gray-100 border-gray-400'
+            ? 'bg-status-good/10 border-status-good'
+            : 'bg-pomme-soft border-pomme-line'
         }`}
       >
-        <span className={`text-base font-semibold ${institution.actif ? 'text-emerald-800' : 'text-gray-500'}`}>
+        <span className={`text-base font-bold ${institution.actif ? 'text-status-good' : 'text-pomme-ink/50'}`}>
           {institution.actif ? '● Institution active' : '○ Institution inactive'}
         </span>
         <span
           className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
-            institution.actif ? 'bg-emerald-600' : 'bg-gray-400'
+            institution.actif ? 'bg-status-good' : 'bg-pomme-line'
           }`}
         >
           <span
-            className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+            className={`inline-block h-6 w-6 transform rounded-full bg-white shadow transition-transform ${
               institution.actif ? 'translate-x-7' : 'translate-x-1'
             }`}
           />
         </span>
       </button>
 
-      <div className="text-xs text-gray-400 flex gap-4">
+      <div className="text-xs text-pomme-ink/35 flex flex-wrap gap-x-4 gap-y-1">
         <span>Créée le {fmt(institution.createdAt)}</span>
         <span>Modifiée le {fmt(institution.updatedAt)}</span>
       </div>
 
-      <div className="border rounded-lg p-4">
+      <div className="bg-white rounded-2xl shadow-card p-6">
         <ChampsFiche form={form} setForm={setForm} />
         <button
           onClick={enregistrer}
           disabled={enCours}
-          className="mt-5 bg-emerald-800 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+          className="mt-6 bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors disabled:opacity-60"
         >
           {enCours ? 'Enregistrement…' : 'Enregistrer les modifications'}
         </button>

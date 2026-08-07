@@ -1,3 +1,22 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-pomme-cream text-pomme-ink antialiased;
+    font-feature-settings: 'cv11', 'ss01';
+  }
+
+  ::selection {
+    @apply bg-pomme-apple-light/60;
+  }
+}
+
+@layer utilities {
+  /* Chiffres alignés (colonnes de tableau, ticks d'axe) — jamais sur un
+     hero figure ou une valeur de stat tile, voir skill dataviz. */
+  .num-tabular {
+    font-variant-numeric: tabular-nums;
+  }
+}

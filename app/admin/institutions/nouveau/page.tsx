@@ -30,16 +30,18 @@ export default function NouvelleInstitutionPage() {
   };
 
   return (
-    <div className="max-w-2xl space-y-5">
-      <h1 className="text-lg font-semibold">Nouvelle institution</h1>
-      <ChampsFiche form={form} setForm={setForm} />
-      <button
-        onClick={creer}
-        disabled={enCours}
-        className="bg-emerald-800 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
-      >
-        {enCours ? 'Création…' : 'Créer l\'institution'}
-      </button>
+    <div className="max-w-2xl space-y-6">
+      <h1 className="text-2xl font-extrabold text-pomme-leaf-deep">Nouvelle institution</h1>
+      <div className="bg-white rounded-2xl shadow-card p-6">
+        <ChampsFiche form={form} setForm={setForm} />
+        <button
+          onClick={creer}
+          disabled={enCours}
+          className="mt-6 bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors disabled:opacity-60"
+        >
+          {enCours ? 'Création…' : 'Créer l\'institution'}
+        </button>
+      </div>
     </div>
   );
 }

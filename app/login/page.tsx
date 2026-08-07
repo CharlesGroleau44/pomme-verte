@@ -30,43 +30,46 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen bg-emerald-800 flex items-center justify-center px-4">
-      <form onSubmit={connecter} className="bg-white rounded-2xl shadow-xl p-8 w-full max-w-sm space-y-5">
+    <div
+      className="min-h-screen flex items-center justify-center px-4"
+      style={{ background: 'linear-gradient(135deg, #3B8C47, #123512)' }}
+    >
+      <form onSubmit={connecter} className="bg-white rounded-3xl shadow-2xl p-9 w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-3">
-          <img src="/logo.jpeg" alt="Traiteur La Pomme Verte" className="h-20 w-20 rounded-full object-cover shadow" />
+          <img src="/logo.jpeg" alt="Traiteur La Pomme Verte" className="h-20 w-20 rounded-full object-cover shadow-lifted" />
           <div className="text-center">
-            <h1 className="text-lg font-semibold text-emerald-900">Traiteur La Pomme Verte</h1>
-            <p className="text-sm text-gray-500">Gestion des repas et des menus</p>
+            <h1 className="text-lg font-extrabold text-pomme-leaf-deep">Traiteur La Pomme Verte</h1>
+            <p className="text-sm text-pomme-ink/50">Gestion des repas et des menus</p>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <label className="block text-sm">
+        <div className="space-y-3.5">
+          <label className="block text-sm font-medium text-pomme-ink/70">
             Nom d&rsquo;usager
             <input
               value={usager}
               onChange={(e) => setUsager(e.target.value)}
               autoFocus
-              className="w-full border rounded px-3 py-2 text-sm mt-1"
+              className="w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow"
             />
           </label>
-          <label className="block text-sm">
+          <label className="block text-sm font-medium text-pomme-ink/70">
             Mot de passe
             <input
               type="password"
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}
-              className="w-full border rounded px-3 py-2 text-sm mt-1"
+              className="w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow"
             />
           </label>
         </div>
 
-        {erreur && <p className="text-sm text-red-600">{erreur}</p>}
+        {erreur && <p className="text-sm text-status-critical font-medium">{erreur}</p>}
 
         <button
           type="submit"
           disabled={enCours}
-          className="w-full bg-emerald-800 text-white rounded-lg px-4 py-2 text-sm font-medium disabled:opacity-60"
+          className="w-full bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors disabled:opacity-60"
         >
           {enCours ? 'Connexion…' : 'Se connecter'}
         </button>

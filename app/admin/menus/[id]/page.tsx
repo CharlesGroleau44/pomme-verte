@@ -66,17 +66,17 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
     charger();
   };
 
-  if (!menu) return <p className="text-sm text-gray-500">Chargement…</p>;
+  if (!menu) return <p className="text-sm text-pomme-ink/40">Chargement…</p>;
 
   const multiInstitutions = menu.institutions.length > 1;
 
   return (
-    <div className="max-w-2xl space-y-4">
-      <div className="flex items-center justify-between">
-        <h1 className="text-lg font-semibold">{menu.thematique || 'Menu'}</h1>
+    <div className="max-w-2xl space-y-5">
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="text-2xl font-extrabold text-pomme-leaf-deep truncate">{menu.thematique || 'Menu'}</h1>
         {menu.complet
-          ? <span className="text-xs text-emerald-700 font-medium">✓ Toutes les journées sont prêtes</span>
-          : <span className="text-xs text-red-600 font-medium">Journées incomplètes — publication bloquée</span>}
+          ? <span className="text-xs font-semibold text-status-good bg-status-good/10 px-2.5 py-1 rounded-full shrink-0">✓ Prêt</span>
+          : <span className="text-xs font-semibold text-status-critical bg-status-critical/10 px-2.5 py-1 rounded-full shrink-0">Incomplet</span>}
       </div>
 
       <div className="space-y-3">
@@ -87,47 +87,47 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
           const descEffective = j.descriptionOverride ?? j.repas?.description ?? '';
 
           return (
-            <div key={j.id} className={`border rounded-lg p-3 ${estVide ? 'border-red-300 bg-red-50' : 'border-gray-200'}`}>
-              <div className="flex items-center gap-2">
-                <span className="text-sm font-medium w-28 shrink-0">{j.jourSemaine} {new Date(j.date).getDate()}</span>
+            <div key={j.id} className={`rounded-2xl p-4 border-2 ${estVide ? 'border-status-critical/30 bg-status-critical/5' : 'border-transparent bg-white shadow-card'}`}>
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="text-sm font-bold text-pomme-ink sm:w-28 shrink-0">{j.jourSemaine} {new Date(j.date).getDate()}</span>
                 <select
                   value={j.repasId ?? ''}
                   onChange={(e) => assignerRepas(j.id, e.target.value)}
-                  className="flex-1 border rounded px-3 py-2 text-sm"
+                  className="flex-1 border border-pomme-line/50 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep"
                 >
                   <option value="" disabled>Choisir un repas…</option>
                   {repasInventaire.map((r) => <option key={r.id} value={r.id}>{r.nom}</option>)}
                 </select>
                 {estModifiee && (
-                  <button onClick={() => reinitialiser(j.id)} className="text-xs text-amber-700 border border-amber-300 rounded px-2 py-1 shrink-0">
+                  <button onClick={() => reinitialiser(j.id)} className="text-xs font-medium text-status-warning border border-status-warning/40 rounded-lg px-2.5 py-1.5 shrink-0 hover:bg-status-warning/10 transition-colors">
                     Réinitialiser
                   </button>
                 )}
               </div>
 
               {j.repasId && (
-                <div className="mt-2 pl-[7.5rem] space-y-1">
+                <div className="mt-2.5 sm:pl-[7.5rem] space-y-1.5">
                   <input
                     value={nomEffectif}
                     onChange={(e) => modifierOverride(j.id, 'nomOverride', e.target.value)}
-                    className="w-full border rounded px-2 py-1 text-xs"
+                    className="w-full border border-pomme-line/40 rounded-lg px-2.5 py-1.5 text-xs font-medium"
                   />
                   <input
                     value={descEffective}
                     onChange={(e) => modifierOverride(j.id, 'descriptionOverride', e.target.value)}
-                    className="w-full border rounded px-2 py-1 text-xs text-gray-500"
+                    className="w-full border border-pomme-line/40 rounded-lg px-2.5 py-1.5 text-xs text-pomme-ink/50"
                   />
-                  {estModifiee && <span className="text-xs bg-amber-100 text-amber-800 rounded-full px-2 py-0.5 inline-block">modifié pour cette journée</span>}
+                  {estModifiee && <span className="text-xs font-medium bg-status-warning/10 text-status-warning rounded-full px-2.5 py-0.5 inline-block">modifié pour cette journée</span>}
                 </div>
               )}
 
               {multiInstitutions && (
-                <div className="mt-2 pl-[7.5rem] flex flex-wrap gap-1.5">
-                  <span className="text-xs text-gray-400">Applique à :</span>
+                <div className="mt-2.5 sm:pl-[7.5rem] flex flex-wrap gap-1.5 items-center">
+                  <span className="text-xs text-pomme-ink/35">Applique à :</span>
                   {/* TODO Claude Code : brancher sur PATCH seulementPourInstitutions,
                       même logique que assignerRepas ci-dessus */}
                   {menu.institutions.map((mi) => (
-                    <span key={mi.institutionId} className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">
+                    <span key={mi.institutionId} className="text-xs bg-pomme-soft text-pomme-ink/60 rounded-full px-2.5 py-0.5">
                       {mi.institution.nom}
                     </span>
                   ))}
@@ -138,7 +138,7 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
         })}
       </div>
 
-      <p className="text-xs text-gray-400">
+      <p className="text-xs text-pomme-ink/35">
         La publication (par institution) se fait depuis la liste des menus, une fois toutes les journées assignées.
       </p>
     </div>

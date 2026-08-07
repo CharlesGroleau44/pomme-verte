@@ -36,6 +36,8 @@ export const FICHE_VIDE: FormeFiche = {
   notes: '',
 };
 
+const INPUT = 'border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow';
+
 export default function ChampsFiche({
   form,
   setForm,
@@ -50,8 +52,8 @@ export default function ChampsFiche({
   });
 
   return (
-    <div className="space-y-5">
-      <div className="flex items-start gap-4">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row items-start gap-4">
         <ChampPhoto
           label="Logo"
           url={form.logoUrl}
@@ -60,45 +62,45 @@ export default function ChampsFiche({
           taille={112}
           aide="Format carré recommandé, min. 400 × 400 px, PNG (fond transparent) ou JPG, 8 Mo max."
         />
-        <label className="block text-sm flex-1">
+        <label className="block text-sm font-medium text-pomme-ink/70 flex-1 w-full">
           Nom de l&rsquo;institution
-          <input {...champ('nom')} placeholder="École, CPE, RPA…" className="w-full border rounded px-3 py-2 text-sm mt-1" />
+          <input {...champ('nom')} placeholder="École, CPE, RPA…" className={`w-full mt-1 ${INPUT}`} />
         </label>
       </div>
 
       <div>
-        <span className="block text-sm font-medium mb-2">Adresse</span>
+        <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Adresse</span>
         <div className="space-y-2">
-          <input {...champ('adresse')} placeholder="Numéro et rue" className="w-full border rounded px-3 py-2 text-sm" />
-          <div className="grid grid-cols-3 gap-2">
-            <input {...champ('ville')} placeholder="Ville" className="border rounded px-3 py-2 text-sm" />
-            <input {...champ('province')} placeholder="Province" className="border rounded px-3 py-2 text-sm" />
-            <input {...champ('codePostal')} placeholder="Code postal" className="border rounded px-3 py-2 text-sm" />
+          <input {...champ('adresse')} placeholder="Numéro et rue" className={`w-full ${INPUT}`} />
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <input {...champ('ville')} placeholder="Ville" className={INPUT} />
+            <input {...champ('province')} placeholder="Province" className={INPUT} />
+            <input {...champ('codePostal')} placeholder="Code postal" className={INPUT} />
           </div>
         </div>
       </div>
 
       <div>
-        <span className="block text-sm font-medium mb-2">Coordonnées</span>
-        <div className="grid grid-cols-2 gap-2">
-          <input {...champ('telephone')} placeholder="Téléphone" className="border rounded px-3 py-2 text-sm" />
-          <input {...champ('courriel')} placeholder="Courriel" className="border rounded px-3 py-2 text-sm" />
-          <input {...champ('siteWeb')} placeholder="Site web" className="border rounded px-3 py-2 text-sm col-span-2" />
+        <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Coordonnées</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input {...champ('telephone')} placeholder="Téléphone" className={INPUT} />
+          <input {...champ('courriel')} placeholder="Courriel" className={INPUT} />
+          <input {...champ('siteWeb')} placeholder="Site web" className={`sm:col-span-2 ${INPUT}`} />
         </div>
       </div>
 
       <div>
-        <span className="block text-sm font-medium mb-2">Personne contact</span>
-        <div className="grid grid-cols-2 gap-2">
-          <input {...champ('personneContact')} placeholder="Nom" className="border rounded px-3 py-2 text-sm col-span-2" />
-          <input {...champ('telephoneContact')} placeholder="Téléphone direct" className="border rounded px-3 py-2 text-sm" />
-          <input {...champ('courrielContact')} placeholder="Courriel direct" className="border rounded px-3 py-2 text-sm" />
+        <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Personne contact</span>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <input {...champ('personneContact')} placeholder="Nom" className={`sm:col-span-2 ${INPUT}`} />
+          <input {...champ('telephoneContact')} placeholder="Téléphone direct" className={INPUT} />
+          <input {...champ('courrielContact')} placeholder="Courriel direct" className={INPUT} />
         </div>
       </div>
 
-      <label className="block text-sm">
+      <label className="block text-sm font-medium text-pomme-ink/70">
         Notes / autres informations
-        <textarea {...champ('notes')} rows={3} className="w-full border rounded px-3 py-2 text-sm mt-1" />
+        <textarea {...champ('notes')} rows={3} className={`w-full mt-1 ${INPUT}`} />
       </label>
     </div>
   );
