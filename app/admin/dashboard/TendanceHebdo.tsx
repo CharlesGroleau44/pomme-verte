@@ -56,6 +56,8 @@ export default function TendanceHebdo({ titre, dates }: { titre: string; dates: 
                 <g
                   key={s.debut.toISOString()}
                   tabIndex={0}
+                  role="img"
+                  aria-label={`Semaine du ${fmtEtiquetteSemaine(s.debut)} : ${s.compte} entrée${s.compte > 1 ? 's' : ''}`}
                   onMouseEnter={() => setSurvol(i)}
                   onMouseLeave={() => setSurvol(null)}
                   onFocus={() => setSurvol(i)}
