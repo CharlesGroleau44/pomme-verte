@@ -56,12 +56,12 @@ export function menuEstComplet(journees: { repasId: string | null }[]) {
 }
 
 /**
- * Détermine si une journée s'applique à une école donnée : un
- * tableau seulementPourEcoles vide signifie "toutes les écoles du
- * menu" ; sinon, seules les écoles listées voient cette journée.
- * Utilisé côté formulaire de commande (module suivant) — inclus ici
- * car la règle est définie au niveau du menu.
+ * Détermine si une journée s'applique à une institution donnée : un
+ * tableau seulementPourInstitutions vide signifie "toutes les
+ * institutions du menu" ; sinon, seules les institutions listées
+ * voient cette journée. Utilisé côté formulaire de commande (module
+ * suivant) — inclus ici car la règle est définie au niveau du menu.
  */
-export function journeeApplicableA(journee: { seulementPourEcoles: string[] }, ecoleId: string) {
-  return journee.seulementPourEcoles.length === 0 || journee.seulementPourEcoles.includes(ecoleId);
+export function journeeApplicableA(journee: { seulementPourInstitutions: string[] }, institutionId: string) {
+  return journee.seulementPourInstitutions.length === 0 || journee.seulementPourInstitutions.includes(institutionId);
 }

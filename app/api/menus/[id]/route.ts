@@ -7,7 +7,7 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
   const menu = await prisma.menu.findUnique({
     where: { id: params.id },
     include: {
-      ecoles: { include: { ecole: true } },
+      institutions: { include: { institution: true } },
       journees: { include: { repas: true }, orderBy: { date: 'asc' } },
     },
   });
@@ -51,7 +51,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     if ('photoUrlOverride' in body) data.photoUrlOverride = body.photoUrlOverride;
   }
 
-  if ('seulementPourEcoles' in body) data.seulementPourEcoles = body.seulementPourEcoles;
+  if ('seulementPourInstitutions' in body) data.seulementPourInstitutions = body.seulementPourInstitutions;
 
   const journee = await prisma.menuJournee.update({
     where: { id: body.journeeId, menuId: params.id },

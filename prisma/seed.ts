@@ -4,7 +4,7 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
-const ECOLES = [
+const INSTITUTIONS = [
   'Boisé-Fabi',
   'Brassard - Saint-Patrice',
   'Jardin-des-Lacs',
@@ -24,9 +24,9 @@ const REPAS = [
 ];
 
 async function main() {
-  for (const nom of ECOLES) {
-    const existing = await prisma.ecole.findFirst({ where: { nom } });
-    if (!existing) await prisma.ecole.create({ data: { nom } });
+  for (const nom of INSTITUTIONS) {
+    const existing = await prisma.institution.findFirst({ where: { nom } });
+    if (!existing) await prisma.institution.create({ data: { nom } });
   }
 
   for (const r of REPAS) {

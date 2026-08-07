@@ -10,9 +10,10 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
           <img src="/logo.jpeg" alt="Traiteur La Pomme Verte" className="h-11 w-11 rounded-full bg-white object-cover" />
           <span className="font-semibold">Traiteur La Pomme Verte — Gestion</span>
           <nav className="flex gap-4 text-sm">
+            <Link href="/admin/institutions" className="hover:underline">Institutions</Link>
             <Link href="/admin/repas" className="hover:underline">Repas</Link>
             <Link href="/admin/menus" className="hover:underline">Menus</Link>
-            {/* TODO Claude Code : ajouter Écoles et Commandes quand ces modules seront construits */}
+            {/* TODO Claude Code : ajouter Commandes/Administration (phases 2 et 4) */}
           </nav>
           <BoutonDeconnexion />
         </div>

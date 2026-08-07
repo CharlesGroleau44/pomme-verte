@@ -9,7 +9,7 @@ export async function GET() {
   const menus = await prisma.menu.findMany({
     orderBy: { periodeDebut: 'desc' },
     include: {
-      ecoles: { include: { ecole: true } },
+      institutions: { include: { institution: true } },
       journees: { include: { repas: true } },
     },
   });
@@ -18,13 +18,13 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  // Attendu : { periodeDebut, periodeFin, thematique, dateLimiteCommande, ecoleIds: string[] }
+  // Attendu : { periodeDebut, periodeFin, thematique, dateLimiteCommande, institutionIds: string[] }
 
   if (!body.periodeDebut || !body.periodeFin) {
     return NextResponse.json({ error: 'Les dates de début et de fin sont requises.' }, { status: 400 });
   }
-  if (!Array.isArray(body.ecoleIds) || body.ecoleIds.length === 0) {
-    return NextResponse.json({ error: 'Au moins une école doit être sélectionnée.' }, { status: 400 });
+  if (!Array.isArray(body.institutionIds) || body.institutionIds.length === 0) {
+    return NextResponse.json({ error: 'Au moins une institution doit être sélectionnée.' }, { status: 400 });
   }
 
   const debut = new Date(body.periodeDebut);
@@ -38,20 +38,20 @@ export async function POST(req: NextRequest) {
       thematique: body.thematique ?? null,
       dateLimiteCommande: body.dateLimiteCommande ? new Date(body.dateLimiteCommande) : null,
       pdfUrl: body.pdfUrl ?? null,
-      ecoles: {
-        create: body.ecoleIds.map((ecoleId: string) => ({ ecoleId, publie: false })),
+      institutions: {
+        create: body.institutionIds.map((institutionId: string) => ({ institutionId, publie: false })),
       },
       journees: {
         create: journees.map((j) => ({
           date: j.date,
           jourSemaine: j.jourSemaine,
           repasId: null,
-          seulementPourEcoles: [],
+          seulementPourInstitutions: [],
         })),
       },
     },
     include: {
-      ecoles: { include: { ecole: true } },
+      institutions: { include: { institution: true } },
       journees: { include: { repas: true } },
     },
   });

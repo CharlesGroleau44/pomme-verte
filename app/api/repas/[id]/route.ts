@@ -11,10 +11,18 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       nom: body.nom,
       description: body.description,
       photoUrl: body.photoUrl,
+      photoUrl2: body.photoUrl2,
+      photoUrl3: body.photoUrl3,
       prixPetit: body.prixPetit,
       prixRegulier: body.prixRegulier,
       prixDeuxiemeService: body.prixDeuxiemeService,
+      // institutionIds : liste complète — remplace l'association existante
+      // (vide = disponible pour toutes les institutions).
+      institutions: Array.isArray(body.institutionIds)
+        ? { set: body.institutionIds.map((id: string) => ({ id })) }
+        : undefined,
     },
+    include: { institutions: true },
   });
 
   return NextResponse.json(repas);

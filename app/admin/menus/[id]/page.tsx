@@ -13,13 +13,13 @@ type Journee = {
   repasId: string | null;
   nomOverride: string | null;
   descriptionOverride: string | null;
-  seulementPourEcoles: string[];
+  seulementPourInstitutions: string[];
   repas: Repas | null;
 };
 type MenuDetail = {
   id: string;
   thematique: string | null;
-  ecoles: { ecoleId: string; ecole: { id: string; nom: string } }[];
+  institutions: { institutionId: string; institution: { id: string; nom: string } }[];
   journees: Journee[];
   complet: boolean;
 };
@@ -68,7 +68,7 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
 
   if (!menu) return <p className="text-sm text-gray-500">Chargement…</p>;
 
-  const multiEcoles = menu.ecoles.length > 1;
+  const multiInstitutions = menu.institutions.length > 1;
 
   return (
     <div className="max-w-2xl space-y-4">
@@ -121,14 +121,14 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
                 </div>
               )}
 
-              {multiEcoles && (
+              {multiInstitutions && (
                 <div className="mt-2 pl-[7.5rem] flex flex-wrap gap-1.5">
                   <span className="text-xs text-gray-400">Applique à :</span>
-                  {/* TODO Claude Code : brancher sur PATCH seulementPourEcoles,
+                  {/* TODO Claude Code : brancher sur PATCH seulementPourInstitutions,
                       même logique que assignerRepas ci-dessus */}
-                  {menu.ecoles.map((me) => (
-                    <span key={me.ecoleId} className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">
-                      {me.ecole.nom}
+                  {menu.institutions.map((mi) => (
+                    <span key={mi.institutionId} className="text-xs bg-gray-100 text-gray-500 rounded-full px-2 py-0.5">
+                      {mi.institution.nom}
                     </span>
                   ))}
                 </div>
@@ -139,7 +139,7 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       <p className="text-xs text-gray-400">
-        La publication (par école) se fait depuis la liste des menus, une fois toutes les journées assignées.
+        La publication (par institution) se fait depuis la liste des menus, une fois toutes les journées assignées.
       </p>
     </div>
   );

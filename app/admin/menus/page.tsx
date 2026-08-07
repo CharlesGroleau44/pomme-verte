@@ -3,13 +3,13 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-type MenuEcole = { ecoleId: string; publie: boolean; ecole: { id: string; nom: string } };
+type MenuInstitution = { institutionId: string; publie: boolean; institution: { id: string; nom: string } };
 type Menu = {
   id: string;
   periodeDebut: string;
   periodeFin: string;
   thematique: string | null;
-  ecoles: MenuEcole[];
+  institutions: MenuInstitution[];
 };
 
 export default function MenusPage() {
@@ -22,11 +22,11 @@ export default function MenusPage() {
 
   useEffect(() => { charger(); }, []);
 
-  const togglePublication = async (menuId: string, ecoleId: string, publieActuel: boolean) => {
+  const togglePublication = async (menuId: string, institutionId: string, publieActuel: boolean) => {
     const res = await fetch(`/api/menus/${menuId}/publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ecoleId, publie: !publieActuel }),
+      body: JSON.stringify({ institutionId, publie: !publieActuel }),
     });
     if (!res.ok) {
       const { error } = await res.json();
@@ -57,13 +57,13 @@ export default function MenusPage() {
               <Link href={`/admin/menus/${m.id}`} className="text-xs text-emerald-700 underline">Modifier les journées</Link>
             </div>
             <div className="mt-2 flex flex-wrap gap-2">
-              {m.ecoles.map((me) => (
+              {m.institutions.map((mi) => (
                 <button
-                  key={me.ecoleId}
-                  onClick={() => togglePublication(m.id, me.ecoleId, me.publie)}
-                  className={`text-xs px-2 py-1 rounded-full ${me.publie ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}
+                  key={mi.institutionId}
+                  onClick={() => togglePublication(m.id, mi.institutionId, mi.publie)}
+                  className={`text-xs px-2 py-1 rounded-full ${mi.publie ? 'bg-emerald-100 text-emerald-800' : 'bg-gray-100 text-gray-500'}`}
                 >
-                  {me.ecole.nom} — {me.publie ? 'publié' : 'brouillon'}
+                  {mi.institution.nom} — {mi.publie ? 'publié' : 'brouillon'}
                 </button>
               ))}
             </div>

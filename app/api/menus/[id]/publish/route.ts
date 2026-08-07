@@ -4,19 +4,19 @@ import { prisma } from '@/lib/prisma';
 import { menuEstComplet } from '@/lib/menu-logic';
 
 /**
- * Bascule la publication d'un menu pour UNE école précise. La
- * publication est toujours par école (voir MenuEcole.publie) — il
- * n'existe pas de statut global "publié" sur le Menu lui-même.
+ * Bascule la publication d'un menu pour UNE institution précise. La
+ * publication est toujours par institution (voir MenuInstitution.publie)
+ * — il n'existe pas de statut global "publié" sur le Menu lui-même.
  *
  * Refuse la publication (mais autorise toujours la dépublication)
  * si des journées du menu n'ont pas encore de repas assigné.
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
-  // Attendu : { ecoleId: string, publie: boolean }
+  // Attendu : { institutionId: string, publie: boolean }
 
-  if (!body.ecoleId || typeof body.publie !== 'boolean') {
-    return NextResponse.json({ error: 'ecoleId et publie (booléen) sont requis.' }, { status: 400 });
+  if (!body.institutionId || typeof body.publie !== 'boolean') {
+    return NextResponse.json({ error: 'institutionId et publie (booléen) sont requis.' }, { status: 400 });
   }
 
   if (body.publie) {
@@ -29,11 +29,11 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
     }
   }
 
-  const menuEcole = await prisma.menuEcole.update({
-    where: { menuId_ecoleId: { menuId: params.id, ecoleId: body.ecoleId } },
+  const menuInstitution = await prisma.menuInstitution.update({
+    where: { menuId_institutionId: { menuId: params.id, institutionId: body.institutionId } },
     data: { publie: body.publie },
-    include: { ecole: true },
+    include: { institution: true },
   });
 
-  return NextResponse.json(menuEcole);
+  return NextResponse.json(menuInstitution);
 }

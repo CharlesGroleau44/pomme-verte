@@ -28,6 +28,7 @@ rsync -az --delete \
   --exclude '.git' \
   --exclude '*.tar.gz' \
   --exclude '.DS_Store' \
+  --exclude 'data' \
   "$DOSSIER_SOURCE"/ "$VPS:$RACINE_VPS/build/"
 
 echo "==> 2/4 Construction sur le VPS (npm ci + prisma generate + next build)…"

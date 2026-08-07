@@ -3,32 +3,28 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 
-type Ecole = { id: string; nom: string; actif: boolean };
+type Institution = { id: string; nom: string; actif: boolean };
 
 export default function NouveauMenuPage() {
   const router = useRouter();
-  const [ecoles, setEcoles] = useState<Ecole[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
   const [debut, setDebut] = useState('');
   const [fin, setFin] = useState('');
   const [thematique, setThematique] = useState('');
   const [dateLimite, setDateLimite] = useState('');
-  const [ecoleIds, setEcoleIds] = useState<string[]>([]);
+  const [institutionIds, setInstitutionIds] = useState<string[]>([]);
 
   useEffect(() => {
-    // TODO Claude Code : route GET /api/ecoles n'existe pas encore
-    // dans ce démarrage (module Écoles = prochain module). En
-    // attendant, brancher directement sur prisma.ecole.findMany
-    // via une route API minimale, ou seed + fetch direct.
-    fetch('/api/ecoles').then((r) => r.json()).then(setEcoles).catch(() => setEcoles([]));
+    fetch('/api/institutions').then((r) => r.json()).then(setInstitutions).catch(() => setInstitutions([]));
   }, []);
 
-  const toggleEcole = (id: string) => {
-    setEcoleIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
+  const toggleInstitution = (id: string) => {
+    setInstitutionIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
   };
 
   const creer = async () => {
-    if (!debut || !fin || ecoleIds.length === 0) {
-      alert('Date de début, date de fin et au moins une école sont requis.');
+    if (!debut || !fin || institutionIds.length === 0) {
+      alert('Date de début, date de fin et au moins une institution sont requis.');
       return;
     }
     const res = await fetch('/api/menus', {
@@ -39,7 +35,7 @@ export default function NouveauMenuPage() {
         periodeFin: fin,
         thematique,
         dateLimiteCommande: dateLimite || null,
-        ecoleIds,
+        institutionIds,
       }),
     });
     if (!res.ok) {
@@ -77,16 +73,16 @@ export default function NouveauMenuPage() {
       </label>
 
       <div>
-        <span className="block text-sm mb-1">Écoles</span>
+        <span className="block text-sm mb-1">Institutions</span>
         <div className="flex flex-wrap gap-2">
-          {ecoles.filter((e) => e.actif).map((e) => (
+          {institutions.filter((i) => i.actif).map((i) => (
             <button
-              key={e.id}
+              key={i.id}
               type="button"
-              onClick={() => toggleEcole(e.id)}
-              className={`px-3 py-1.5 rounded-full text-xs border ${ecoleIds.includes(e.id) ? 'bg-emerald-800 text-white border-emerald-800' : 'bg-white border-gray-300'}`}
+              onClick={() => toggleInstitution(i.id)}
+              className={`px-3 py-1.5 rounded-full text-xs border ${institutionIds.includes(i.id) ? 'bg-emerald-800 text-white border-emerald-800' : 'bg-white border-gray-300'}`}
             >
-              {e.nom}
+              {i.nom}
             </button>
           ))}
         </div>
