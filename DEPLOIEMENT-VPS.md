@@ -11,6 +11,7 @@
 - Dossier : `/opt/pommeverte/`
   - `build/` — le code source envoyé par `deploy-vps.sh`, où se fait le `npm ci` + `next build`.
   - `actuel/` — le bundle Next.js standalone servi par le service (`server.js`, `.next/static`, `node_modules`…).
+  - `data/photos/` — **photos de repas, stockage disque persistant** (jamais touché par un déploiement — `actuel` est entièrement remplacé à chaque bascule, ce dossier vit à côté). `PHOTOS_DIR` dans `pommeverte.env` pointe ici.
   - `sauvegardes/` — réservé (rien n'y est écrit pour l'instant — voir « Restes à faire »).
   - `pommeverte.env` — variables d'environnement (root, chmod 600 — secrets).
 - **Port interne : 3006** (prochain disponible après Santé 3000, NHCG 3001, Prologue 3002, Épilogue 3003, OdooGo 3004, Foyer/Maison 3005).
@@ -26,8 +27,18 @@ philosophie « tout natif systemd+Caddy » du VPS pour les apps non-Odoo).
 - Schéma appliqué par `npx prisma db push` (pas de migrations formelles pour ce
   démarrage — à réévaluer si le schéma stabilise et que des données réelles
   s'accumulent : à ce moment, passer à `prisma migrate` pour un historique propre).
-- Amorçage initial : `npx tsx prisma/seed.ts` — 8 écoles réelles + 5 repas de
-  départ (voir `prisma/seed.ts`).
+- Amorçage initial : `npx tsx prisma/seed.ts` — 8 institutions réelles + 5 repas
+  de départ (voir `prisma/seed.ts`).
+
+## Photos de repas
+
+Jusqu'à 3 photos par repas (principale + 2), téléversées via
+`POST /api/repas/photos` (multipart, JPEG/PNG/WebP, 8 Mo max) et servies par
+`GET /api/photos/[filename]` (lit `PHOTOS_DIR`, protégé comme le reste de
+l'app par `middleware.ts`). Stockage **disque local**, pas de service externe
+(Supabase Storage, S3…) — cohérent avec la philosophie « tout sur le VPS de
+Charles » des autres apps. `lib/photos.ts` centralise le dossier, les types
+acceptés et la taille max.
 
 ## Le service (systemd, redémarrage auto)
 
@@ -101,19 +112,43 @@ Next.js tente de **prérendre statiquement** au build toute route API `GET` qui
 n'utilise aucune fonction dynamique (cookies, headers, `searchParams`) — même
 sous `app/api/`. Comme ces routes interrogent Prisma, le build échouait sans
 base de données accessible au moment du build. Fix : `export const dynamic =
-'force-dynamic'` sur les routes de collection (`/api/ecoles`, `/api/menus`,
-`/api/repas`) — elles doivent de toute façon toujours servir des données
-fraîches, jamais du contenu figé au build.
+'force-dynamic'` sur les routes de collection (`/api/institutions`,
+`/api/menus`, `/api/repas`) — elles doivent de toute façon toujours servir des
+données fraîches, jamais du contenu figé au build.
+
+## Renommage École → Institution (2026-08-07)
+
+Le modèle de données a été renommé au complet — `Ecole`→`Institution`,
+`MenuEcole`→`MenuInstitution`, `ecoleId`→`institutionId`,
+`seulementPourEcoles`→`seulementPourInstitutions`, route `/api/ecoles` →
+`/api/institutions` (avec CRUD complet cette fois, y compris édition et
+suppression protégée par usage). Décision prise en confirmant avec la
+présentation de vente du projet (`Institutions : écoles, RPA ou tout autre
+établissement — nom, logo, statut actif`) — Écoles et Institutions auraient
+été le même concept en double, un vrai risque de confusion. Migration faite
+par `prisma db push --accept-data-loss` (confirmé par Charles) : les 8 lignes
+existantes ont été recréées à l'identique par le seed, aucun menu n'existait
+encore donc rien d'autre n'a été perdu.
+
+Un `Repas` peut maintenant être associé à des institutions précises (relation
+n:n implicite Prisma `Repas.institutions` / `Institution.repas`) — **liste
+vide = disponible pour toutes**, même convention que
+`seulementPourInstitutions` sur les journées de menu.
 
 ## Restes à faire
 
-- **Sauvegarde de la base Postgres** : contrairement à Santé/NHCG (SQLite,
-  couvertes par `/usr/local/bin/sauvegarde-vps`), Postgres n'y est pas encore
-  intégré — `/opt/pommeverte/sauvegardes/` est vide. À faire avant que ce
-  module porte des données réelles de production (au minimum un
-  `pg_dump` quotidien avec rotation, sur le modèle des autres apps).
+- **Sauvegarde de la base Postgres ET du dossier `data/photos/`** :
+  contrairement à Santé/NHCG (SQLite, couvertes par
+  `/usr/local/bin/sauvegarde-vps`), ni l'un ni l'autre n'est encore intégré —
+  `/opt/pommeverte/sauvegardes/` est vide. À faire avant que ce module porte
+  des données réelles de production (au minimum un `pg_dump` quotidien avec
+  rotation + une copie du dossier photos, sur le modèle des autres apps).
 - Tout ce que le README du projet liste déjà sous « Ce qui reste à faire »
-  (upload de photos, exception par école, duplication de menu, gestion
-  complète des écoles, notifications UI, vraie authentification applicative).
+  (exception par institution dans l'UI du montage de menu — le champ existe
+  côté API, duplication de menu, notifications UI, vraie authentification
+  applicative).
 - Décider si cet hébergement `pommeverte.charlesgroleau.com` reste temporaire
   ou devient l'adresse définitive (domaine propre au traiteur, etc.).
+- Phase 2 de la présentation de vente (commandes en ligne, paiement) — hors
+  scope du travail actuel, qui couvre la Phase 1 (fondations : institutions,
+  repas, menus, publication).
