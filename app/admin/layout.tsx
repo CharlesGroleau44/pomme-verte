@@ -1,5 +1,6 @@
 // app/admin/layout.tsx
 import Link from 'next/link';
+import BoutonDeconnexion from './BoutonDeconnexion';
 
 export default function AdminLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -13,6 +14,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
             <Link href="/admin/menus" className="hover:underline">Menus</Link>
             {/* TODO Claude Code : ajouter Écoles et Commandes quand ces modules seront construits */}
           </nav>
+          <BoutonDeconnexion />
         </div>
       </header>
       <main className="max-w-4xl mx-auto px-5 py-6">{children}</main>
