@@ -34,12 +34,12 @@ export default function TendanceHebdo({ titre, dates }: { titre: string; dates: 
   return (
     <div className="bg-white rounded-2xl shadow-card p-5">
       <div className="flex items-baseline justify-between mb-2">
-        <h3 className="text-sm font-semibold text-pomme-ink/70">{titre}</h3>
-        <span className="text-xs text-pomme-ink/40">8 dernières semaines</span>
+        <h3 className="text-sm font-semibold text-pomme-ink/85">{titre}</h3>
+        <span className="text-xs text-pomme-ink/65">8 dernières semaines</span>
       </div>
 
       {totalEntrees === 0 ? (
-        <p className="text-sm text-pomme-ink/40 py-10 text-center">Pas encore de données à tracer.</p>
+        <p className="text-sm text-pomme-ink/65 py-10 text-center">Pas encore de données à tracer.</p>
       ) : (
         <div className="relative">
           <svg viewBox={`0 0 ${LARGEUR} ${PADDING_HAUT + HAUTEUR_ZONE + PADDING_BAS}`} className="w-full h-auto overflow-visible">
@@ -72,11 +72,11 @@ export default function TendanceHebdo({ titre, dates }: { titre: string; dates: 
                     className="transition-colors"
                   />
                   {estDerniere && (
-                    <text x={x + largeurBarre / 2} y={base - hauteurAffichee - 8} textAnchor="middle" className="fill-pomme-ink/60" fontSize={11} fontWeight={700}>
+                    <text x={x + largeurBarre / 2} y={base - hauteurAffichee - 8} textAnchor="middle" className="fill-pomme-ink/80" fontSize={11} fontWeight={700}>
                       {s.compte}
                     </text>
                   )}
-                  <text x={x + largeurBarre / 2} y={base + 16} textAnchor="middle" className="fill-pomme-ink/40" fontSize={10}>
+                  <text x={x + largeurBarre / 2} y={base + 16} textAnchor="middle" className="fill-pomme-ink/60" fontSize={10}>
                     {fmtEtiquetteSemaine(s.debut)}
                   </text>
                 </g>

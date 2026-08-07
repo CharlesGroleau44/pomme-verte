@@ -15,9 +15,9 @@ export type EntreeRecente = {
 export default function EntreesRecentes({ titre, entrees }: { titre: string; entrees: EntreeRecente[] }) {
   return (
     <div className="bg-white rounded-2xl shadow-card p-5">
-      <h3 className="text-sm font-semibold text-pomme-ink/70 mb-3">{titre}</h3>
+      <h3 className="text-sm font-semibold text-pomme-ink/85 mb-3">{titre}</h3>
       {entrees.length === 0 ? (
-        <p className="text-sm text-pomme-ink/40 py-6 text-center">Rien de récent.</p>
+        <p className="text-sm text-pomme-ink/65 py-6 text-center">Rien de récent.</p>
       ) : (
         <ul className="divide-y divide-pomme-soft">
           {entrees.map((e) => {
@@ -30,9 +30,9 @@ export default function EntreesRecentes({ titre, entrees }: { titre: string; ent
                 )}
                 <div className="min-w-0 flex-1">
                   <div className="text-sm font-medium text-pomme-ink truncate">{e.titre}</div>
-                  {e.sousTitre && <div className="text-xs text-pomme-ink/40 truncate">{e.sousTitre}</div>}
+                  {e.sousTitre && <div className="text-xs font-medium text-pomme-ink/65 truncate">{e.sousTitre}</div>}
                 </div>
-                <div className="text-xs text-pomme-ink/40 shrink-0">{relatif(e.date)}</div>
+                <div className="text-xs font-medium text-pomme-ink/65 shrink-0">{relatif(e.date)}</div>
               </div>
             );
             return (

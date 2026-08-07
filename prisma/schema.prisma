@@ -73,7 +73,7 @@ model Repas {
   prixDeuxiemeService Decimal  @db.Decimal(6, 2)
   createdAt           DateTime @default(now())
 
-  journees            MenuJournee[]
+  selections          MenuJourneeSelection[]
   institutions        Institution[]
 
   @@map("repas")
@@ -120,10 +120,8 @@ model MenuInstitution {
 
 // ------------------------------------------------------------------
 // MenuJournee — une journée (lundi à vendredi) dans la plage du
-// menu. Référence toujours un Repas ; les champs *Override ne sont
-// peuplés que si l'utilisatrice modifie cette journée précise SANS
-// vouloir changer le repas maître. Résolution d'affichage :
-//   nom effectif = nomOverride ?? repas.nom
+// menu. Porte de 0 à 2 MenuJourneeSelection (voir plus bas) — une
+// journée est complète dès qu'elle en a au moins une.
 // "seulementPourInstitutions" (vide = toutes les institutions du menu)
 // permet une journée additionnelle propre à certaines institutions
 // seulement.
@@ -134,16 +132,42 @@ model MenuJournee {
   date                       DateTime @db.Date
   jourSemaine                String   // "Lundi" | "Mardi" | "Mercredi" | "Jeudi" | "Vendredi"
 
-  repasId                    String?
-  nomOverride                String?
-  descriptionOverride        String?
-  photoUrlOverride           String?
-
   seulementPourInstitutions  String[] @default([]) // liste d'institutionId ; [] = toutes les institutions du menu
 
   menu                       Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  repas                      Repas?   @relation(fields: [repasId], references: [id])
+  selections                 MenuJourneeSelection[]
 
   @@unique([menuId, date])
   @@map("menu_journees")
+}
+
+// ------------------------------------------------------------------
+// MenuJourneeSelection — un choix de repas pour une journée précise.
+// Une journée porte jusqu'à 2 sélections (au moins 1 requise pour que
+// la journée — et donc le menu — soit considérée complète). Les champs
+// *Override permettent d'ajuster nom/description/prix pour CETTE
+// occurrence précise SANS modifier le repas maître. Résolution :
+//   valeur effective = *Override ?? repas.valeur
+// Supprimer une sélection libère le repas — il redevient sélectionnable
+// pour cette même journée.
+// ------------------------------------------------------------------
+model MenuJourneeSelection {
+  id                            String   @id @default(cuid())
+  journeeId                     String
+  repasId                       String
+
+  nomOverride                   String?
+  descriptionOverride           String?
+  photoUrlOverride              String?
+  prixPetitOverride             Decimal? @db.Decimal(6, 2)
+  prixRegulierOverride          Decimal? @db.Decimal(6, 2)
+  prixDeuxiemeServiceOverride   Decimal? @db.Decimal(6, 2)
+
+  createdAt                     DateTime @default(now())
+
+  journee                       MenuJournee @relation(fields: [journeeId], references: [id], onDelete: Cascade)
+  repas                         Repas       @relation(fields: [repasId], references: [id])
+
+  @@unique([journeeId, repasId])
+  @@map("menu_journee_selections")
 }

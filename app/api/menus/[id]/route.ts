@@ -8,7 +8,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
     where: { id: params.id },
     include: {
       institutions: { include: { institution: true } },
-      journees: { include: { repas: true }, orderBy: { date: 'asc' } },
+      journees: {
+        include: { selections: { include: { repas: true }, orderBy: { createdAt: 'asc' } } },
+        orderBy: { date: 'asc' },
+      },
     },
   });
 
@@ -18,18 +21,10 @@ export async function GET(_req: NextRequest, { params }: { params: { id: string 
 }
 
 /**
- * PATCH sur une journée précise du menu. Deux cas d'usage distincts :
- *
- * 1. Assignation d'un repas (sélection dans l'inventaire) :
- *    { journeeId, repasId } — efface aussi les *Override existants,
- *    puisque changer de repas repart d'une base propre.
- *
- * 2. Modification à la volée SANS changer le repas maître :
- *    { journeeId, nomOverride?, descriptionOverride?, photoUrlOverride? }
- *    — repasId reste inchangé.
- *
- * Un "reset" (bouton Réinitialiser côté UI) envoie les trois champs
- * *Override à null explicitement.
+ * PATCH sur une journée précise du menu — ne gère plus que
+ * "seulementPourInstitutions". Les sélections de repas (ajout,
+ * modification, suppression) passent par /api/journees/[journeeId]/selections
+ * et /api/selections/[selectionId] (une journée porte 0 à 2 sélections).
  */
 export async function PATCH(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
@@ -37,26 +32,13 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   if (!body.journeeId) {
     return NextResponse.json({ error: 'journeeId requis.' }, { status: 400 });
   }
-
-  const data: Record<string, unknown> = {};
-
-  if ('repasId' in body) {
-    data.repasId = body.repasId;
-    data.nomOverride = null;
-    data.descriptionOverride = null;
-    data.photoUrlOverride = null;
-  } else {
-    if ('nomOverride' in body) data.nomOverride = body.nomOverride;
-    if ('descriptionOverride' in body) data.descriptionOverride = body.descriptionOverride;
-    if ('photoUrlOverride' in body) data.photoUrlOverride = body.photoUrlOverride;
+  if (!('seulementPourInstitutions' in body)) {
+    return NextResponse.json({ error: 'seulementPourInstitutions requis.' }, { status: 400 });
   }
-
-  if ('seulementPourInstitutions' in body) data.seulementPourInstitutions = body.seulementPourInstitutions;
 
   const journee = await prisma.menuJournee.update({
     where: { id: body.journeeId, menuId: params.id },
-    data,
-    include: { repas: true },
+    data: { seulementPourInstitutions: body.seulementPourInstitutions },
   });
 
   return NextResponse.json(journee);

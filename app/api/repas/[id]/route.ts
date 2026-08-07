@@ -29,11 +29,11 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
 }
 
 export async function DELETE(_req: NextRequest, { params }: { params: { id: string } }) {
-  // Un repas utilisé dans au moins une MenuJournee est bloqué à la
-  // suppression plutôt que de laisser des journées orphelines.
+  // Un repas utilisé dans au moins une sélection de journée est bloqué à
+  // la suppression plutôt que de laisser des journées orphelines.
   // Voir §4 du briefing : décision produit à confirmer avec Charles —
   // l'alternative (autoriser + orpheliner) est un simple retrait de ce bloc.
-  const utilise = await prisma.menuJournee.findFirst({ where: { repasId: params.id } });
+  const utilise = await prisma.menuJourneeSelection.findFirst({ where: { repasId: params.id } });
   if (utilise) {
     return NextResponse.json(
       { error: 'Ce repas est utilisé dans au moins un menu et ne peut pas être supprimé.' },

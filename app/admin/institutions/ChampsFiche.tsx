@@ -62,14 +62,14 @@ export default function ChampsFiche({
           taille={112}
           aide="Format carré recommandé, min. 400 × 400 px, PNG (fond transparent) ou JPG, 8 Mo max."
         />
-        <label className="block text-sm font-medium text-pomme-ink/70 flex-1 w-full">
+        <label className="block text-sm font-medium text-pomme-ink/85 flex-1 w-full">
           Nom de l&rsquo;institution
           <input {...champ('nom')} placeholder="École, CPE, RPA…" className={`w-full mt-1 ${INPUT}`} />
         </label>
       </div>
 
       <div>
-        <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Adresse</span>
+        <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Adresse</span>
         <div className="space-y-2">
           <input {...champ('adresse')} placeholder="Numéro et rue" className={`w-full ${INPUT}`} />
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -81,7 +81,7 @@ export default function ChampsFiche({
       </div>
 
       <div>
-        <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Coordonnées</span>
+        <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Coordonnées</span>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <input {...champ('telephone')} placeholder="Téléphone" className={INPUT} />
           <input {...champ('courriel')} placeholder="Courriel" className={INPUT} />
@@ -90,7 +90,7 @@ export default function ChampsFiche({
       </div>
 
       <div>
-        <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Personne contact</span>
+        <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Personne contact</span>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
           <input {...champ('personneContact')} placeholder="Nom" className={`sm:col-span-2 ${INPUT}`} />
           <input {...champ('telephoneContact')} placeholder="Téléphone direct" className={INPUT} />
@@ -98,7 +98,7 @@ export default function ChampsFiche({
         </div>
       </div>
 
-      <label className="block text-sm font-medium text-pomme-ink/70">
+      <label className="block text-sm font-medium text-pomme-ink/85">
         Notes / autres informations
         <textarea {...champ('notes')} rows={3} className={`w-full mt-1 ${INPUT}`} />
       </label>

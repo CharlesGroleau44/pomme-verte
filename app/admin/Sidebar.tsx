@@ -26,7 +26,7 @@ export default function Sidebar() {
         <img src="/logo.jpeg" alt="Traiteur La Pomme Verte" className="h-10 w-10 rounded-full bg-white object-cover shrink-0" />
         <div className="min-w-0">
           <div className="text-sm font-bold leading-tight truncate">La Pomme Verte</div>
-          <div className="text-xs text-pomme-apple-light/80 leading-tight">Gestion</div>
+          <div className="text-xs text-pomme-apple-light/90 leading-tight">Gestion</div>
         </div>
       </div>
 
@@ -53,7 +53,7 @@ export default function Sidebar() {
       <div className="px-3 pb-6 pt-2 border-t border-white/10">
         <button
           onClick={deconnecter}
-          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-pomme-apple-light/80 hover:bg-white/10 hover:text-white transition-colors w-full"
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-pomme-apple-light/90 hover:bg-white/10 hover:text-white transition-colors w-full"
         >
           <IconeDeconnexion className="shrink-0" />
           Déconnexion

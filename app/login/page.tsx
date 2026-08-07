@@ -39,12 +39,12 @@ export default function LoginPage() {
           <img src="/logo.jpeg" alt="Traiteur La Pomme Verte" className="h-20 w-20 rounded-full object-cover shadow-lifted" />
           <div className="text-center">
             <h1 className="text-lg font-extrabold text-pomme-leaf-deep">Traiteur La Pomme Verte</h1>
-            <p className="text-sm text-pomme-ink/50">Gestion des repas et des menus</p>
+            <p className="text-sm font-medium text-pomme-ink/70">Gestion des repas et des menus</p>
           </div>
         </div>
 
         <div className="space-y-3.5">
-          <label className="block text-sm font-medium text-pomme-ink/70">
+          <label className="block text-sm font-medium text-pomme-ink/85">
             Nom d&rsquo;usager
             <input
               value={usager}
@@ -53,7 +53,7 @@ export default function LoginPage() {
               className="w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow"
             />
           </label>
-          <label className="block text-sm font-medium text-pomme-ink/70">
+          <label className="block text-sm font-medium text-pomme-ink/85">
             Mot de passe
             <input
               type="password"

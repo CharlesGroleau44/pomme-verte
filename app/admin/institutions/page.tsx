@@ -74,7 +74,7 @@ export default function InstitutionsPage() {
       )}
 
       <div>
-        <h2 className="text-sm font-semibold text-pomme-ink/50 uppercase tracking-wide mb-2">Toutes les institutions</h2>
+        <h2 className="text-sm font-semibold text-pomme-ink/70 uppercase tracking-wide mb-2">Toutes les institutions</h2>
         <div className="bg-white rounded-2xl shadow-card divide-y divide-pomme-soft overflow-hidden">
           {institutions.map((i) => (
             <Link
@@ -90,7 +90,7 @@ export default function InstitutionsPage() {
                 )}
                 <div className="min-w-0">
                   <div className="text-sm font-semibold truncate">{i.nom}</div>
-                  {i.ville && <div className="text-xs text-pomme-ink/40 truncate">{i.ville}</div>}
+                  {i.ville && <div className="text-xs text-pomme-ink/65 truncate">{i.ville}</div>}
                 </div>
               </div>
               <span
@@ -102,7 +102,7 @@ export default function InstitutionsPage() {
               </span>
             </Link>
           ))}
-          {charge && institutions.length === 0 && <p className="p-5 text-sm text-pomme-ink/40">Aucune institution pour le moment.</p>}
+          {charge && institutions.length === 0 && <p className="p-5 text-sm text-pomme-ink/65">Aucune institution pour le moment.</p>}
         </div>
       </div>
     </div>

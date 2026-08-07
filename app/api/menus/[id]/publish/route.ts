@@ -20,7 +20,10 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
   }
 
   if (body.publie) {
-    const journees = await prisma.menuJournee.findMany({ where: { menuId: params.id } });
+    const journees = await prisma.menuJournee.findMany({
+      where: { menuId: params.id },
+      include: { selections: true },
+    });
     if (!menuEstComplet(journees)) {
       return NextResponse.json(
         { error: 'Impossible de publier : au moins une journée du menu n\'a pas de repas assigné.' },

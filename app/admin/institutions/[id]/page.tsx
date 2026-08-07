@@ -82,7 +82,7 @@ export default function FicheInstitutionPage({ params }: { params: { id: string 
 
   const fmt = (d: string) => new Date(d).toLocaleString('fr-CA', { dateStyle: 'long', timeStyle: 'short' });
 
-  if (!institution) return <p className="text-sm text-pomme-ink/40">Chargement…</p>;
+  if (!institution) return <p className="text-sm text-pomme-ink/65">Chargement…</p>;
 
   return (
     <div className="max-w-2xl space-y-5">
@@ -100,7 +100,7 @@ export default function FicheInstitutionPage({ params }: { params: { id: string 
             : 'bg-pomme-soft border-pomme-line'
         }`}
       >
-        <span className={`text-base font-bold ${institution.actif ? 'text-status-good' : 'text-pomme-ink/50'}`}>
+        <span className={`text-base font-bold ${institution.actif ? 'text-status-good' : 'text-pomme-ink/70'}`}>
           {institution.actif ? '● Institution active' : '○ Institution inactive'}
         </span>
         <span
@@ -116,7 +116,7 @@ export default function FicheInstitutionPage({ params }: { params: { id: string 
         </span>
       </button>
 
-      <div className="text-xs text-pomme-ink/35 flex flex-wrap gap-x-4 gap-y-1">
+      <div className="text-xs font-medium text-pomme-ink/60 flex flex-wrap gap-x-4 gap-y-1">
         <span>Créée le {fmt(institution.createdAt)}</span>
         <span>Modifiée le {fmt(institution.updatedAt)}</span>
       </div>

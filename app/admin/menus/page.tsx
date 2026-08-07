@@ -15,14 +15,21 @@ type Menu = {
   institutions: MenuInstitution[];
   createdAt: string;
 };
+type Institution = { id: string; nom: string; actif: boolean };
 
 export default function MenusPage() {
   const [menus, setMenus] = useState<Menu[]>([]);
+  const [institutions, setInstitutions] = useState<Institution[]>([]);
+  const [filtreInstitutionId, setFiltreInstitutionId] = useState<string | null>(null);
   const [charge, setCharge] = useState(false);
 
   const charger = async () => {
-    const res = await fetch('/api/menus');
-    setMenus(await res.json());
+    const [menusRes, institutionsRes] = await Promise.all([
+      fetch('/api/menus'),
+      fetch('/api/institutions'),
+    ]);
+    setMenus(await menusRes.json());
+    setInstitutions(await institutionsRes.json());
     setCharge(true);
   };
 
@@ -56,6 +63,13 @@ export default function MenusPage() {
       href: `/admin/menus/${m.id}`,
     }));
 
+  const institutionsUtilisees = institutions.filter((i) =>
+    menus.some((m) => m.institutions.some((mi) => mi.institutionId === i.id))
+  );
+  const menusAffiches = filtreInstitutionId
+    ? menus.filter((m) => m.institutions.some((mi) => mi.institutionId === filtreInstitutionId))
+    : menus;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -86,9 +100,40 @@ export default function MenusPage() {
       )}
 
       <div>
-        <h2 className="text-sm font-semibold text-pomme-ink/50 uppercase tracking-wide mb-2">Tous les menus</h2>
+        <div className="flex items-center justify-between mb-2">
+          <h2 className="text-sm font-semibold text-pomme-ink/70 uppercase tracking-wide">Tous les menus</h2>
+        </div>
+
+        {institutionsUtilisees.length > 1 && (
+          <div className="flex flex-wrap gap-2 mb-3">
+            <button
+              onClick={() => setFiltreInstitutionId(null)}
+              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                filtreInstitutionId === null
+                  ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
+                  : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
+              }`}
+            >
+              Toutes les institutions
+            </button>
+            {institutionsUtilisees.map((i) => (
+              <button
+                key={i.id}
+                onClick={() => setFiltreInstitutionId(i.id)}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  filtreInstitutionId === i.id
+                    ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
+                    : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
+                }`}
+              >
+                {i.nom}
+              </button>
+            ))}
+          </div>
+        )}
+
         <div className="space-y-3">
-          {menus.map((m) => (
+          {menusAffiches.map((m) => (
             <div key={m.id} className="bg-white rounded-2xl shadow-card p-5">
               <div className="flex items-center justify-between">
                 <div className="font-semibold text-sm text-pomme-ink">
@@ -113,7 +158,10 @@ export default function MenusPage() {
               </div>
             </div>
           ))}
-          {charge && menus.length === 0 && <p className="text-sm text-pomme-ink/40">Aucun menu créé pour le moment.</p>}
+          {charge && menus.length === 0 && <p className="text-sm text-pomme-ink/65">Aucun menu créé pour le moment.</p>}
+          {charge && menus.length > 0 && menusAffiches.length === 0 && (
+            <p className="text-sm text-pomme-ink/65">Aucun menu pour cette institution.</p>
+          )}
         </div>
       </div>
     </div>

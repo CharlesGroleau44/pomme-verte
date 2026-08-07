@@ -10,7 +10,7 @@ export async function GET() {
     orderBy: { periodeDebut: 'desc' },
     include: {
       institutions: { include: { institution: true } },
-      journees: { include: { repas: true } },
+      journees: { include: { selections: true } },
     },
   });
   return NextResponse.json(menus);
@@ -45,14 +45,13 @@ export async function POST(req: NextRequest) {
         create: journees.map((j) => ({
           date: j.date,
           jourSemaine: j.jourSemaine,
-          repasId: null,
           seulementPourInstitutions: [],
         })),
       },
     },
     include: {
       institutions: { include: { institution: true } },
-      journees: { include: { repas: true } },
+      journees: { include: { selections: true } },
     },
   });
 

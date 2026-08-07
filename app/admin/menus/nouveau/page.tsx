@@ -55,28 +55,28 @@ export default function NouveauMenuPage() {
 
       <div className="bg-white rounded-2xl shadow-card p-6 space-y-4">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <label className="block text-sm font-medium text-pomme-ink/70">
+          <label className="block text-sm font-medium text-pomme-ink/85">
             Date de début
             <input type="date" value={debut} onChange={(e) => setDebut(e.target.value)} className={INPUT} />
           </label>
-          <label className="block text-sm font-medium text-pomme-ink/70">
+          <label className="block text-sm font-medium text-pomme-ink/85">
             Date de fin
             <input type="date" value={fin} onChange={(e) => setFin(e.target.value)} className={INPUT} />
           </label>
         </div>
 
-        <label className="block text-sm font-medium text-pomme-ink/70">
+        <label className="block text-sm font-medium text-pomme-ink/85">
           Thématique
           <input value={thematique} onChange={(e) => setThematique(e.target.value)} className={INPUT} />
         </label>
 
-        <label className="block text-sm font-medium text-pomme-ink/70">
+        <label className="block text-sm font-medium text-pomme-ink/85">
           Date limite de commande
           <input type="date" value={dateLimite} onChange={(e) => setDateLimite(e.target.value)} className={INPUT} />
         </label>
 
         <div>
-          <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Institutions</span>
+          <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Institutions</span>
           <div className="flex flex-wrap gap-2">
             {institutions.filter((i) => i.actif).map((i) => (
               <button
@@ -86,7 +86,7 @@ export default function NouveauMenuPage() {
                 className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                   institutionIds.includes(i.id)
                     ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
-                    : 'bg-white border-pomme-line/60 text-pomme-ink/70 hover:border-pomme-apple-deep'
+                    : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
                 }`}
               >
                 {i.nom}

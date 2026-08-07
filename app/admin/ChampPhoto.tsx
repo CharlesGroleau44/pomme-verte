@@ -43,7 +43,7 @@ export default function ChampPhoto({
 
   return (
     <div className="space-y-1.5">
-      <span className="block text-xs font-medium text-pomme-ink/50">{label}</span>
+      <span className="block text-xs font-medium text-pomme-ink/70">{label}</span>
       {url ? (
         <div className="relative" style={style}>
           <img src={url} alt={label} className={`w-full h-full object-cover border border-pomme-soft ${formeClasse}`} />
@@ -61,7 +61,7 @@ export default function ChampPhoto({
           disabled={enCours}
           onClick={() => inputRef.current?.click()}
           style={style}
-          className={`border-2 border-dashed border-pomme-line/50 text-xs text-pomme-ink/40 hover:border-pomme-apple-deep hover:text-pomme-apple-deep transition-colors disabled:opacity-50 ${formeClasse}`}
+          className={`border-2 border-dashed border-pomme-line/50 text-xs text-pomme-ink/65 hover:border-pomme-apple-deep hover:text-pomme-apple-deep transition-colors disabled:opacity-50 ${formeClasse}`}
         >
           {enCours ? 'Envoi…' : '+ Photo'}
         </button>
@@ -77,7 +77,7 @@ export default function ChampPhoto({
           e.target.value = '';
         }}
       />
-      {aide && <p className="text-xs text-pomme-ink/35 max-w-[14rem]">{aide}</p>}
+      {aide && <p className="text-xs font-medium text-pomme-ink/60 max-w-[14rem]">{aide}</p>}
     </div>
   );
 }

@@ -188,7 +188,7 @@ export default function RepasPage() {
           />
 
           <div>
-            <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Photos</span>
+            <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Photos</span>
             <div className="flex gap-3">
               <ChampPhoto label="Principale" url={form.photoUrl} onChange={(url) => setForm({ ...form, photoUrl: url })} />
               <ChampPhoto label="Photo 2" url={form.photoUrl2} onChange={(url) => setForm({ ...form, photoUrl2: url })} />
@@ -197,17 +197,17 @@ export default function RepasPage() {
           </div>
 
           <div>
-            <span className="block text-sm font-semibold text-pomme-ink/70 mb-2">Prix par format</span>
+            <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Prix par format</span>
             <div className="grid grid-cols-3 gap-2">
-              <label className="block text-xs text-pomme-ink/50">
+              <label className="block text-xs font-medium text-pomme-ink/70">
                 Petit repas
                 <input value={form.prixPetit} onChange={(e) => setForm({ ...form, prixPetit: e.target.value })} className="w-full border border-pomme-line/50 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40" />
               </label>
-              <label className="block text-xs text-pomme-ink/50">
+              <label className="block text-xs font-medium text-pomme-ink/70">
                 Repas régulier
                 <input value={form.prixRegulier} onChange={(e) => setForm({ ...form, prixRegulier: e.target.value })} className="w-full border border-pomme-line/50 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40" />
               </label>
-              <label className="block text-xs text-pomme-ink/50">
+              <label className="block text-xs font-medium text-pomme-ink/70">
                 Repas + 2ᵉ service
                 <input value={form.prixDeuxiemeService} onChange={(e) => setForm({ ...form, prixDeuxiemeService: e.target.value })} className="w-full border border-pomme-line/50 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40" />
               </label>
@@ -215,8 +215,8 @@ export default function RepasPage() {
           </div>
 
           <div>
-            <span className="block text-sm font-semibold text-pomme-ink/70 mb-1">Institutions</span>
-            <p className="text-xs text-pomme-ink/40 mb-2">Aucune sélection = disponible pour toutes les institutions.</p>
+            <span className="block text-sm font-semibold text-pomme-ink/85 mb-1">Institutions</span>
+            <p className="text-xs text-pomme-ink/65 mb-2">Aucune sélection = disponible pour toutes les institutions.</p>
             <div className="flex flex-wrap gap-2">
               {institutions.filter((i) => i.actif).map((i) => (
                 <button
@@ -226,7 +226,7 @@ export default function RepasPage() {
                   className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
                     form.institutionIds.includes(i.id)
                       ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
-                      : 'bg-white border-pomme-line/60 text-pomme-ink/70 hover:border-pomme-apple-deep'
+                      : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
                   }`}
                 >
                   {i.nom}
@@ -242,7 +242,7 @@ export default function RepasPage() {
       )}
 
       <div>
-        <h2 className="text-sm font-semibold text-pomme-ink/50 uppercase tracking-wide mb-2">Tout l&rsquo;inventaire</h2>
+        <h2 className="text-sm font-semibold text-pomme-ink/70 uppercase tracking-wide mb-2">Tout l&rsquo;inventaire</h2>
         <div className="bg-white rounded-2xl shadow-card divide-y divide-pomme-soft overflow-hidden">
           {repas.map((r) => (
             <div key={r.id} className="flex items-center justify-between px-5 py-3.5 gap-3">
@@ -254,8 +254,8 @@ export default function RepasPage() {
                 )}
                 <div className="min-w-0">
                   <div className="text-sm font-semibold truncate">{r.nom}</div>
-                  <div className="text-xs text-pomme-ink/50 truncate">{r.description}</div>
-                  <div className="text-xs text-pomme-ink/35">
+                  <div className="text-xs font-medium text-pomme-ink/70 truncate">{r.description}</div>
+                  <div className="text-xs font-medium text-pomme-ink/60">
                     Petit repas {r.prixPetit}$ · Repas régulier {r.prixRegulier}$ · Repas + 2ᵉ service {r.prixDeuxiemeService}$
                   </div>
                   {r.institutions.length > 0 && (
@@ -269,7 +269,7 @@ export default function RepasPage() {
               </div>
             </div>
           ))}
-          {charge && repas.length === 0 && <p className="p-5 text-sm text-pomme-ink/40">Aucun repas pour le moment.</p>}
+          {charge && repas.length === 0 && <p className="p-5 text-sm text-pomme-ink/65">Aucun repas pour le moment.</p>}
         </div>
       </div>
     </div>
