@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
     if (champ in body) data[champ] = body[champ] || null;
   }
 
-  const institution = await prisma.institution.create({ data });
+  const institution = await prisma.institution.create({ data: data as { nom: string } });
 
   return NextResponse.json(institution, { status: 201 });
 }
