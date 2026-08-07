@@ -1,0 +1,115 @@
+// prisma/schema.prisma
+// Traiteur La Pomme Verte — plateforme de gestion des menus
+// Modules couverts par ce démarrage : École (minimal), Repas, Menu
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ------------------------------------------------------------------
+// École — CRUD minimal pour ce module. La gestion complète (logo,
+// activation) sera étoffée dans le module Écoles/Commandes.
+// ------------------------------------------------------------------
+model Ecole {
+  id        String   @id @default(cuid())
+  nom       String
+  logoUrl   String?
+  actif     Boolean  @default(true)
+  createdAt DateTime @default(now())
+
+  menus     MenuEcole[]
+
+  @@map("ecoles")
+}
+
+// ------------------------------------------------------------------
+// Repas — l'inventaire réutilisable. Toute la richesse (photo,
+// description, prix par format) vit ici pour ne jamais être
+// retapée d'un menu à l'autre.
+// ------------------------------------------------------------------
+model Repas {
+  id                  String   @id @default(cuid())
+  nom                 String
+  description         String?
+  photoUrl            String?
+  prixPetit           Decimal  @db.Decimal(6, 2)
+  prixRegulier        Decimal  @db.Decimal(6, 2)
+  prixDeuxiemeService Decimal  @db.Decimal(6, 2)
+  createdAt           DateTime @default(now())
+
+  journees            MenuJournee[]
+
+  @@map("repas")
+}
+
+// ------------------------------------------------------------------
+// Menu — une période (date de début à date de fin), une thématique,
+// une date limite de commande. Peut être assigné à plusieurs écoles
+// (voir MenuEcole) et illustré par un PDF importé (optionnel).
+// ------------------------------------------------------------------
+model Menu {
+  id                  String   @id @default(cuid())
+  periodeDebut        DateTime @db.Date
+  periodeFin          DateTime @db.Date
+  thematique          String?
+  dateLimiteCommande  DateTime? @db.Date
+  pdfUrl              String?
+  createdAt           DateTime @default(now())
+
+  ecoles              MenuEcole[]
+  journees            MenuJournee[]
+
+  @@map("menus")
+}
+
+// ------------------------------------------------------------------
+// Table de jonction Menu <-> École. La publication est INDÉPENDANTE
+// par école : un même menu peut être publié pour certaines écoles
+// et rester en brouillon pour d'autres.
+// ------------------------------------------------------------------
+model MenuEcole {
+  id       String  @id @default(cuid())
+  menuId   String
+  ecoleId  String
+  publie   Boolean @default(false)
+
+  menu     Menu    @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  ecole    Ecole   @relation(fields: [ecoleId], references: [id], onDelete: Cascade)
+
+  @@unique([menuId, ecoleId])
+  @@map("menu_ecoles")
+}
+
+// ------------------------------------------------------------------
+// MenuJournee — une journée (lundi à vendredi) dans la plage du
+// menu. Référence toujours un Repas ; les champs *Override ne sont
+// peuplés que si l'utilisatrice modifie cette journée précise SANS
+// vouloir changer le repas maître. Résolution d'affichage :
+//   nom effectif = nomOverride ?? repas.nom
+// "seulementPourEcoles" (vide = toutes les écoles du menu) permet
+// une journée additionnelle propre à certaines écoles seulement.
+// ------------------------------------------------------------------
+model MenuJournee {
+  id                    String   @id @default(cuid())
+  menuId                String
+  date                  DateTime @db.Date
+  jourSemaine           String   // "Lundi" | "Mardi" | "Mercredi" | "Jeudi" | "Vendredi"
+
+  repasId               String?
+  nomOverride           String?
+  descriptionOverride   String?
+  photoUrlOverride      String?
+
+  seulementPourEcoles   String[] @default([]) // liste d'ecoleId ; [] = toutes les écoles du menu
+
+  menu                  Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  repas                 Repas?   @relation(fields: [repasId], references: [id])
+
+  @@unique([menuId, date])
+  @@map("menu_journees")
+}
