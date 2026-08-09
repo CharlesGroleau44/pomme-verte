@@ -22,6 +22,8 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   for (const champ of CHAMPS_FICHE) {
     if (champ in body) data[champ] = body[champ];
   }
+  if ('offreFondation' in body) data.offreFondation = !!body.offreFondation;
+  if ('offreFormatPetit' in body) data.offreFormatPetit = !!body.offreFormatPetit;
 
   const institution = await prisma.institution.update({
     where: { id: params.id },
@@ -35,7 +37,7 @@ export async function DELETE(_req: NextRequest, { params }: { params: { id: stri
   // Une institution utilisée dans au moins un menu est bloquée à la
   // suppression (même logique que pour un repas) — la désactiver
   // (actif: false) est l'alternative sans casser l'historique des menus.
-  const utilisee = await prisma.menuInstitution.findFirst({ where: { institutionId: params.id } });
+  const utilisee = await prisma.menu.findFirst({ where: { institutionId: params.id } });
   if (utilisee) {
     return NextResponse.json(
       { error: 'Cette institution est utilisée dans au moins un menu et ne peut pas être supprimée. Désactivez-la plutôt.' },

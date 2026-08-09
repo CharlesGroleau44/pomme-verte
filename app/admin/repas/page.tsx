@@ -22,6 +22,62 @@ type Repas = {
 
 type Institution = { id: string; nom: string; actif: boolean };
 
+function ApercuRepas({ repas, institutions, onFermer }: { repas: Repas; institutions: Institution[]; onFermer: () => void }) {
+  const photos = [repas.photoUrl, repas.photoUrl2, repas.photoUrl3].filter((p): p is string => Boolean(p));
+  const nomsInstitutions = institutions.filter((i) => repas.institutions.some((ri) => ri.id === i.id)).map((i) => i.nom);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pomme-ink/50" onClick={onFermer}>
+      <div className="bg-white rounded-2xl shadow-lifted max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
+        {photos.length > 0 ? (
+          <img src={photos[0]} alt={repas.nom} className="w-full h-64 object-cover rounded-t-2xl" />
+        ) : (
+          <div className="w-full h-64 bg-pomme-soft rounded-t-2xl" />
+        )}
+        <div className="p-6 space-y-4">
+          <div className="flex items-start justify-between gap-3">
+            <h2 className="text-xl font-extrabold text-pomme-leaf-deep">{repas.nom}</h2>
+            <button onClick={onFermer} className="text-pomme-ink/50 hover:text-pomme-ink text-xl leading-none shrink-0">✕</button>
+          </div>
+
+          {repas.description && <p className="text-sm font-medium text-pomme-ink/75">{repas.description}</p>}
+
+          {photos.length > 1 && (
+            <div className="flex gap-2">
+              {photos.slice(1).map((p) => (
+                <img key={p} src={p} alt="" className="w-16 h-16 object-cover rounded-xl border border-pomme-soft" />
+              ))}
+            </div>
+          )}
+
+          <div className="grid grid-cols-3 gap-2">
+            <div className="bg-pomme-soft rounded-xl p-3 text-center">
+              <div className="text-xs font-medium text-pomme-ink/65">Petit repas</div>
+              <div className="text-base font-bold text-pomme-leaf-deep">{repas.prixPetit}$</div>
+            </div>
+            <div className="bg-pomme-soft rounded-xl p-3 text-center">
+              <div className="text-xs font-medium text-pomme-ink/65">Régulier</div>
+              <div className="text-base font-bold text-pomme-leaf-deep">{repas.prixRegulier}$</div>
+            </div>
+            <div className="bg-pomme-soft rounded-xl p-3 text-center">
+              <div className="text-xs font-medium text-pomme-ink/65">+ 2ᵉ service</div>
+              <div className="text-base font-bold text-pomme-leaf-deep">{repas.prixDeuxiemeService}$</div>
+            </div>
+          </div>
+
+          <div className="text-sm font-medium text-pomme-ink/70">
+            {nomsInstitutions.length > 0 ? (
+              <>Disponible seulement pour : {nomsInstitutions.join(', ')}</>
+            ) : (
+              <>Disponible pour toutes les institutions</>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const FORM_VIDE = {
   nom: '',
   description: '',
@@ -41,6 +97,7 @@ export default function RepasPage() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState(FORM_VIDE);
+  const [apercuId, setApercuId] = useState<string | null>(null);
 
   const charger = async () => {
     const [repasRes, institutionsRes] = await Promise.all([
@@ -145,11 +202,11 @@ export default function RepasPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-pomme-leaf-deep">Repas</h1>
+      <div className="animate-fade-in-up flex items-center justify-between">
+        <h1 className="text-2xl font-display font-semibold text-pomme-leaf-deep">Repas</h1>
         <button
           onClick={() => (showForm ? setShowForm(false) : ouvrirCreation())}
-          className="bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors"
+          className="press bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf hover:shadow-lifted transition-all"
         >
           {showForm ? 'Annuler' : '+ Nouveau repas'}
         </button>
@@ -245,12 +302,12 @@ export default function RepasPage() {
         <h2 className="text-sm font-semibold text-pomme-ink/70 uppercase tracking-wide mb-2">Tout l&rsquo;inventaire</h2>
         <div className="bg-white rounded-2xl shadow-card divide-y divide-pomme-soft overflow-hidden">
           {repas.map((r) => (
-            <div key={r.id} className="flex items-center justify-between px-5 py-3.5 gap-3">
+            <div key={r.id} className="flex items-center justify-between px-5 py-3.5 gap-3 transition-colors duration-200 hover:bg-pomme-soft/50">
               <div className="flex items-center gap-3 min-w-0">
                 {r.photoUrl ? (
-                  <img src={r.photoUrl} alt="" className="w-12 h-12 object-cover rounded-xl border border-pomme-soft shrink-0" />
+                  <img src={r.photoUrl} alt="" className="w-12 h-12 object-cover rounded-xl border border-pomme-soft shrink-0 shadow-soft" />
                 ) : (
-                  <div className="w-12 h-12 rounded-xl bg-pomme-soft shrink-0" />
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pomme-apple-light to-pomme-apple-mid shrink-0" />
                 )}
                 <div className="min-w-0">
                   <div className="text-sm font-semibold truncate">{r.nom}</div>
@@ -264,6 +321,7 @@ export default function RepasPage() {
                 </div>
               </div>
               <div className="flex items-center gap-3 shrink-0">
+                <button onClick={() => setApercuId(r.id)} className="text-xs font-medium text-pomme-ink/70 hover:underline">Voir</button>
                 <button onClick={() => ouvrirEdition(r)} className="text-xs font-medium text-pomme-apple-deep hover:underline">Modifier</button>
                 <button onClick={() => supprimer(r.id)} className="text-xs font-medium text-status-critical hover:underline">Supprimer</button>
               </div>
@@ -272,6 +330,11 @@ export default function RepasPage() {
           {charge && repas.length === 0 && <p className="p-5 text-sm text-pomme-ink/65">Aucun repas pour le moment.</p>}
         </div>
       </div>
+
+      {apercuId && (() => {
+        const r = repas.find((x) => x.id === apercuId);
+        return r ? <ApercuRepas repas={r} institutions={institutions} onFermer={() => setApercuId(null)} /> : null;
+      })()}
     </div>
   );
 }

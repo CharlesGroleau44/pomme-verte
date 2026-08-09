@@ -29,6 +29,10 @@ export async function POST(req: NextRequest) {
   for (const champ of CHAMPS_FICHE) {
     if (champ in body) data[champ] = body[champ] || null;
   }
+  // Booléens traités séparément — `body[champ] || null` transformerait
+  // un `false` explicite en `null`, invalide pour un champ Boolean non-nullable.
+  if ('offreFondation' in body) data.offreFondation = !!body.offreFondation;
+  if ('offreFormatPetit' in body) data.offreFormatPetit = !!body.offreFormatPetit;
 
   const institution = await prisma.institution.create({ data: data as { nom: string } });
 

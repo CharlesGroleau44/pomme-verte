@@ -5,12 +5,14 @@
 // principal au pouce).
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { IconeInstitution, IconeRepas, IconeMenu } from './Icones';
+import { IconeInstitution, IconeRepas, IconeMenu, IconeCommande, IconeParent } from './Icones';
 
 const SECTIONS = [
   { href: '/admin/institutions', label: 'Institutions', Icone: IconeInstitution },
   { href: '/admin/repas', label: 'Repas', Icone: IconeRepas },
   { href: '/admin/menus', label: 'Menus', Icone: IconeMenu },
+  { href: '/admin/commandes', label: 'Commandes', Icone: IconeCommande },
+  { href: '/admin/parents', label: 'Parents', Icone: IconeParent },
 ];
 
 export default function NavMobile() {
@@ -24,11 +26,11 @@ export default function NavMobile() {
           <Link
             key={href}
             href={href}
-            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium ${
-              actif ? 'text-white' : 'text-pomme-apple-light/85'
+            className={`flex-1 flex flex-col items-center gap-0.5 py-2.5 text-[11px] font-medium transition-all duration-200 ${
+              actif ? 'text-white scale-105' : 'text-pomme-apple-light/85'
             }`}
           >
-            <Icone className={actif ? 'text-white' : 'text-pomme-apple-light/85'} />
+            <Icone className={`transition-transform duration-200 ${actif ? 'text-white -translate-y-0.5' : 'text-pomme-apple-light/85'}`} />
             {label}
           </Link>
         );

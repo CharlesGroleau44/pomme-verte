@@ -42,11 +42,11 @@ export default function InstitutionsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-extrabold text-pomme-leaf-deep">Institutions</h1>
+      <div className="animate-fade-in-up flex items-center justify-between">
+        <h1 className="text-2xl font-display font-semibold text-pomme-leaf-deep">Institutions</h1>
         <Link
           href="/admin/institutions/nouveau"
-          className="bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors"
+          className="press bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf hover:shadow-lifted transition-all"
         >
           + Nouvelle institution
         </Link>
@@ -80,13 +80,13 @@ export default function InstitutionsPage() {
             <Link
               key={i.id}
               href={`/admin/institutions/${i.id}`}
-              className="flex items-center justify-between px-5 py-3.5 gap-3 hover:bg-pomme-soft/60 transition-colors"
+              className="flex items-center justify-between px-5 py-3.5 gap-3 hover:bg-pomme-soft/60 hover:pl-6 transition-all duration-200"
             >
               <div className="flex items-center gap-3 min-w-0">
                 {i.logoUrl ? (
                   <img src={i.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover shrink-0 border border-pomme-soft" />
                 ) : (
-                  <div className="h-9 w-9 rounded-full bg-pomme-soft shrink-0" />
+                  <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pomme-apple-light to-pomme-apple-mid shrink-0" />
                 )}
                 <div className="min-w-0">
                   <div className="text-sm font-semibold truncate">{i.nom}</div>

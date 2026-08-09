@@ -31,14 +31,16 @@ export default function LoginPage() {
 
   return (
     <div
-      className="min-h-screen flex items-center justify-center px-4"
+      className="relative overflow-hidden min-h-screen flex items-center justify-center px-4"
       style={{ background: 'linear-gradient(135deg, #3B8C47, #123512)' }}
     >
-      <form onSubmit={connecter} className="bg-white rounded-3xl shadow-2xl p-9 w-full max-w-sm space-y-6">
+      <div aria-hidden className="absolute -top-24 -left-24 h-72 w-72 rounded-full bg-white/10 blur-3xl animate-float-slow" />
+      <div aria-hidden className="absolute -bottom-24 -right-16 h-72 w-72 rounded-full bg-pomme-gold/20 blur-3xl animate-float-slow" style={{ animationDelay: '2s' }} />
+      <form onSubmit={connecter} className="animate-scale-in relative bg-white rounded-3xl shadow-2xl p-9 w-full max-w-sm space-y-6">
         <div className="flex flex-col items-center gap-3">
           <img src="/logo.jpeg" alt="Traiteur La Pomme Verte" className="h-20 w-20 rounded-full object-cover shadow-lifted" />
           <div className="text-center">
-            <h1 className="text-lg font-extrabold text-pomme-leaf-deep">Traiteur La Pomme Verte</h1>
+            <h1 className="text-xl font-display font-semibold text-pomme-leaf-deep">Traiteur La Pomme Verte</h1>
             <p className="text-sm font-medium text-pomme-ink/70">Gestion des repas et des menus</p>
           </div>
         </div>
@@ -69,7 +71,7 @@ export default function LoginPage() {
         <button
           type="submit"
           disabled={enCours}
-          className="w-full bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors disabled:opacity-60"
+          className="press w-full bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf hover:shadow-lifted hover:-translate-y-0.5 transition-all disabled:opacity-60 disabled:hover:translate-y-0"
         >
           {enCours ? 'Connexion…' : 'Se connecter'}
         </button>

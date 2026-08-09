@@ -35,6 +35,8 @@ export default function FicheInstitutionPage({ params }: { params: { id: string 
       telephoneContact: data.telephoneContact ?? '',
       courrielContact: data.courrielContact ?? '',
       notes: data.notes ?? '',
+      offreFondation: data.offreFondation,
+      offreFormatPetit: data.offreFormatPetit,
     });
   };
 

@@ -13,9 +13,10 @@ datasource db {
 
 // ------------------------------------------------------------------
 // Institution — CPE, école, garderie, etc. Utilisée à deux endroits :
-// (1) l'assignation de Menus (MenuInstitution, publication indépendante
-// par institution) et (2) la disponibilité d'un Repas (voir Repas.
-// institutions plus bas — liste vide = disponible pour toutes).
+// (1) chaque Menu appartient à UNE SEULE institution (voir Menu.institution
+// plus bas — un même contenu servi à une deuxième institution se fait par
+// duplication de menu, pas par partage) et (2) la disponibilité d'un Repas
+// (voir Repas.institutions plus bas — liste vide = disponible pour toutes).
 // ------------------------------------------------------------------
 model Institution {
   id                String   @id @default(cuid())
@@ -42,11 +43,20 @@ model Institution {
   // Notes libres
   notes             String?
 
+  // Modes de paiement et formats acceptés — varient réellement d'une
+  // institution à l'autre (voir Christine, courriels du 9 août) : certaines
+  // écoles ont une entente avec leur fondation, d'autres pas ; certaines
+  // offrent un format "Petit repas" (généralement les maternelles),
+  // d'autres seulement Régulier/Portion+.
+  offreFondation    Boolean  @default(false)
+  offreFormatPetit  Boolean  @default(false)
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now()) @updatedAt
 
-  menus     MenuInstitution[]
+  menus     Menu[]
   repas     Repas[]
+  enfants   Enfant[]
 
   @@map("institutions")
 }
@@ -58,8 +68,7 @@ model Institution {
 //
 // Photos : une principale + jusqu'à deux additionnelles.
 // institutions : liste des institutions pouvant recevoir ce repas —
-// vide = disponible pour toutes (même convention que
-// MenuJournee.seulementPourInstitutions).
+// vide = disponible pour toutes.
 // ------------------------------------------------------------------
 model Repas {
   id                  String   @id @default(cuid())
@@ -81,50 +90,41 @@ model Repas {
 
 // ------------------------------------------------------------------
 // Menu — une période (date de début à date de fin), une thématique,
-// une date limite de commande. Peut être assigné à plusieurs
-// institutions (voir MenuInstitution) et illustré par un PDF importé
-// (optionnel).
+// une date limite de commande, pour UNE SEULE institution (protection
+// structurelle : institutionId est une clé étrangère requise, pas une
+// relation n:n — un menu ne peut littéralement pas être lié à deux
+// institutions à la fois). Pour servir le même contenu à une autre
+// institution, on duplique le menu (voir POST /api/menus/[id]/dupliquer)
+// plutôt que de le partager.
+//
+// Publication : "publie" est l'intention de l'admin ; l'état réellement
+// visible au public tient aussi compte de dateLimiteCommande — voir
+// estActivementPublie() dans lib/menu-logic.ts. Passé cette date à
+// 23h59, le menu redevient invisible même si "publie" est encore vrai,
+// pour qu'aucune commande n'entre après la date limite.
 // ------------------------------------------------------------------
 model Menu {
   id                  String   @id @default(cuid())
+  institutionId       String
   periodeDebut        DateTime @db.Date
   periodeFin          DateTime @db.Date
   thematique          String?
-  dateLimiteCommande  DateTime? @db.Date
+  dateLimiteCommande  DateTime @db.Date
   pdfUrl              String?
+  publie              Boolean  @default(false)
   createdAt           DateTime @default(now())
 
-  institutions        MenuInstitution[]
+  institution         Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
   journees            MenuJournee[]
+  commandes           Commande[]
 
   @@map("menus")
-}
-
-// ------------------------------------------------------------------
-// Table de jonction Menu <-> Institution. La publication est
-// INDÉPENDANTE par institution : un même menu peut être publié pour
-// certaines institutions et rester en brouillon pour d'autres.
-// ------------------------------------------------------------------
-model MenuInstitution {
-  id             String  @id @default(cuid())
-  menuId         String
-  institutionId  String
-  publie         Boolean @default(false)
-
-  menu           Menu        @relation(fields: [menuId], references: [id], onDelete: Cascade)
-  institution    Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
-
-  @@unique([menuId, institutionId])
-  @@map("menu_institutions")
 }
 
 // ------------------------------------------------------------------
 // MenuJournee — une journée (lundi à vendredi) dans la plage du
 // menu. Porte de 0 à 2 MenuJourneeSelection (voir plus bas) — une
 // journée est complète dès qu'elle en a au moins une.
-// "seulementPourInstitutions" (vide = toutes les institutions du menu)
-// permet une journée additionnelle propre à certaines institutions
-// seulement.
 // ------------------------------------------------------------------
 model MenuJournee {
   id                         String   @id @default(cuid())
@@ -132,10 +132,9 @@ model MenuJournee {
   date                       DateTime @db.Date
   jourSemaine                String   // "Lundi" | "Mardi" | "Mercredi" | "Jeudi" | "Vendredi"
 
-  seulementPourInstitutions  String[] @default([]) // liste d'institutionId ; [] = toutes les institutions du menu
-
   menu                       Menu     @relation(fields: [menuId], references: [id], onDelete: Cascade)
   selections                 MenuJourneeSelection[]
+  lignesCommande             LigneCommande[]
 
   @@unique([menuId, date])
   @@map("menu_journees")
@@ -167,7 +166,133 @@ model MenuJourneeSelection {
 
   journee                       MenuJournee @relation(fields: [journeeId], references: [id], onDelete: Cascade)
   repas                         Repas       @relation(fields: [repasId], references: [id])
+  lignesCommande                LigneCommande[]
 
   @@unique([journeeId, repasId])
   @@map("menu_journee_selections")
+}
+
+// ------------------------------------------------------------------
+// CompteParent — un parent, identifié par courriel/mot de passe (haché
+// PBKDF2, voir lib/parent-auth.ts). Session distincte de l'admin
+// (voir lib/parent-session.ts) : ce sont deux mondes séparés, un
+// parent ne peut jamais accéder à /admin.
+// ------------------------------------------------------------------
+model CompteParent {
+  id             String   @id @default(cuid())
+  courriel       String   @unique
+  motDePasseHash String
+  nom            String
+  telephone      String?
+  // Client ayant réglé une entente annuelle directement avec le traiteur —
+  // bascule admin (voir /admin/parents) ; quand actif, le checkout de ce
+  // parent saute complètement l'étape "mode de paiement" (voir
+  // FormulaireCommande.tsx), la commande est enregistrée en PREPAYE.
+  prepayeAnnuel  Boolean  @default(false)
+  // Préremplit le sélecteur de paiement à la prochaine commande (voir
+  // FormulaireCommande.tsx) — pure confort, n'a aucun effet si le parent
+  // est prepayeAnnuel (le mode est alors toujours forcé à PREPAYE).
+  modePaiementPrefere ModePaiement?
+  // Réinitialisation de mot de passe — jeton à usage unique, expire 1h
+  // après émission (voir /api/parent/mot-de-passe-oublie et
+  // /api/parent/reinitialiser). Sert aussi à "réclamer" un compte-fantôme
+  // créé silencieusement par une commande invité (voir
+  // commandes-invite/route.ts) : ce compte a un mot de passe aléatoire
+  // inutilisable, la réinitialisation est la seule façon d'y accéder.
+  resetToken       String?   @unique
+  resetTokenExpire DateTime?
+  createdAt      DateTime @default(now())
+
+  enfants        Enfant[]
+  commandes      Commande[]
+
+  @@map("comptes_parents")
+}
+
+// ------------------------------------------------------------------
+// Enfant — rattaché à un compte parent ET à une institution précise
+// (l'école qu'il fréquente), pour ne proposer que les menus de cette
+// institution au moment de commander. Mêmes champs que le formulaire
+// papier actuel (niveau, intolérances) pour ne rien perdre à la
+// migration.
+// ------------------------------------------------------------------
+model Enfant {
+  id               String   @id @default(cuid())
+  compteParentId   String
+  institutionId    String
+  nomDeFamille     String
+  prenom           String
+  niveau           String   // "Préscolaire" | "1".."6" | "Adulte"
+  intolerances     String[] // sous-ensemble de "Gluten"/"Lactose"/"Végétarien"
+  autreIntolerance String?
+  createdAt        DateTime @default(now())
+
+  compteParent     CompteParent @relation(fields: [compteParentId], references: [id], onDelete: Cascade)
+  institution      Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  commandes        Commande[]
+
+  @@map("enfants")
+}
+
+enum ModePaiement {
+  ARGENT
+  VIREMENT_INTERAC
+  CHEQUE
+  PAYPAL
+  PREPAYE
+  FONDATION
+}
+
+// ------------------------------------------------------------------
+// Commande — la version numérique du coupon-réponse papier : un enfant,
+// un menu, un mode de paiement, et une ligne par journée commandée
+// (voir LigneCommande). Une seule commande par (enfant, menu) — on la
+// MODIFIE plutôt que d'en créer une seconde, comme le permettait déjà
+// le coupon (biffer/recocher avant de le remettre).
+// ------------------------------------------------------------------
+model Commande {
+  id             String       @id @default(cuid())
+  compteParentId String
+  enfantId       String
+  menuId         String
+  modePaiement   ModePaiement
+  paye           Boolean      @default(false)
+  payeLe         DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @default(now()) @updatedAt
+
+  compteParent   CompteParent    @relation(fields: [compteParentId], references: [id], onDelete: Cascade)
+  enfant         Enfant          @relation(fields: [enfantId], references: [id], onDelete: Cascade)
+  menu           Menu            @relation(fields: [menuId], references: [id], onDelete: Cascade)
+  lignes         LigneCommande[]
+
+  @@unique([enfantId, menuId])
+  @@map("commandes")
+}
+
+enum TailleRepas {
+  PETIT
+  REGULIER
+  DEUXIEME_SERVICE
+}
+
+// ------------------------------------------------------------------
+// LigneCommande — le choix pour UNE journée : quel repas (parmi les 1
+// ou 2 offerts ce jour-là) et quelle taille. Une seule ligne par
+// journée par commande — modifier le choix remplace la ligne plutôt
+// que d'en ajouter une.
+// ------------------------------------------------------------------
+model LigneCommande {
+  id          String      @id @default(cuid())
+  commandeId  String
+  journeeId   String
+  selectionId String
+  taille      TailleRepas
+
+  commande    Commande             @relation(fields: [commandeId], references: [id], onDelete: Cascade)
+  journee     MenuJournee          @relation(fields: [journeeId], references: [id], onDelete: Cascade)
+  selection   MenuJourneeSelection @relation(fields: [selectionId], references: [id], onDelete: Cascade)
+
+  @@unique([commandeId, journeeId])
+  @@map("lignes_commande")
 }

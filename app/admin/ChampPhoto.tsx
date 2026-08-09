@@ -46,7 +46,7 @@ export default function ChampPhoto({
       <span className="block text-xs font-medium text-pomme-ink/70">{label}</span>
       {url ? (
         <div className="relative" style={style}>
-          <img src={url} alt={label} className={`w-full h-full object-cover border border-pomme-soft ${formeClasse}`} />
+          <img src={url} alt={label} className={`w-full h-full ${rond ? 'object-contain p-1.5 bg-white' : 'object-cover'} border border-pomme-soft ${formeClasse}`} />
           <button
             type="button"
             onClick={() => onChange(null)}

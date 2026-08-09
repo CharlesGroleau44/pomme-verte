@@ -6,18 +6,22 @@ import Link from 'next/link';
 
 export default function MenusPubliqueLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-pomme-cream">
-      <header className="bg-pomme-leaf-deep">
+    <div className="min-h-screen bg-white">
+      {/* Sobre et blanc, comme le site actuel du traiteur (traiteurlapommeverte.com)
+          — pas de dégradé ni de décorations, juste le logo qu'elle utilise déjà. */}
+      <header className="border-b border-pomme-line/40">
         <div className="max-w-3xl mx-auto px-5 py-4 flex items-center justify-between gap-3">
-          <Link href="/menus" className="flex items-center gap-3 min-w-0">
-            <img src="/logo.jpeg" alt="Traiteur La Pomme Verte" className="h-10 w-10 rounded-full bg-white object-cover shrink-0" />
-            <span className="text-white font-extrabold truncate">Traiteur La Pomme Verte</span>
+          <Link href="/menus" className="flex items-center gap-3 min-w-0 group">
+            <img
+              src="/logo.jpeg"
+              alt="Traiteur La Pomme Verte"
+              className="h-11 w-11 rounded-full object-cover shrink-0 transition-transform duration-300 group-hover:scale-105"
+            />
+            <span className="text-pomme-leaf-deep font-display font-semibold text-sm sm:text-lg truncate">Traiteur La Pomme Verte</span>
           </Link>
-          {/* Sert l'admin pour l'instant — les comptes-parents (phase
-              commandes en ligne) partageront cette même porte d'entrée. */}
           <Link
-            href="/login"
-            className="bg-white/10 hover:bg-white/20 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors shrink-0"
+            href="/parent/connexion"
+            className="press bg-pomme-apple-deep hover:bg-pomme-leaf text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors shrink-0"
           >
             Se connecter
           </Link>

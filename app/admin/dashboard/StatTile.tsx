@@ -12,7 +12,7 @@ export default function StatTile({
   sousTexte?: string;
 }) {
   return (
-    <div className="bg-white rounded-2xl shadow-card p-5 min-w-0">
+    <div className="bg-white rounded-2xl shadow-card p-5 min-w-0 transition-all duration-300 hover:shadow-lifted hover:-translate-y-0.5">
       <div className="text-xs font-semibold text-pomme-ink/70 uppercase tracking-wide truncate">{label}</div>
       <div className="text-3xl font-extrabold text-pomme-leaf-deep mt-1.5">{valeur}</div>
       {sousTexte && <div className="text-xs font-medium text-pomme-ink/65 mt-1 truncate">{sousTexte}</div>}

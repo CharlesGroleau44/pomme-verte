@@ -7,19 +7,22 @@
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import CarteSelection, { type Selection } from './CarteSelection';
+import { estActivementPublie, jourDuMoisUTC } from '@/lib/menu-logic';
 
 type Repas = { id: string; nom: string };
 type Journee = {
   id: string;
   date: string;
   jourSemaine: string;
-  seulementPourInstitutions: string[];
   selections: Selection[];
 };
 type MenuDetail = {
   id: string;
+  institutionId: string;
   thematique: string | null;
-  institutions: { institutionId: string; institution: { id: string; nom: string } }[];
+  publie: boolean;
+  dateLimiteCommande: string;
+  institution: { id: string; nom: string };
   journees: Journee[];
   complet: boolean;
 };
@@ -59,12 +62,13 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
 
   if (!menu) return <p className="text-sm text-pomme-ink/65">Chargement…</p>;
 
-  const multiInstitutions = menu.institutions.length > 1;
-
   return (
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-extrabold text-pomme-leaf-deep truncate">{menu.thematique || 'Menu'}</h1>
+        <div className="min-w-0">
+          <h1 className="text-2xl font-extrabold text-pomme-leaf-deep truncate">{menu.thematique || 'Menu'}</h1>
+          <p className="text-sm font-medium text-pomme-ink/65 truncate">{menu.institution.nom}</p>
+        </div>
         {menu.complet ? (
           <Link
             href="/admin/menus"
@@ -77,6 +81,31 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
         )}
       </div>
 
+      <div className="flex flex-wrap gap-4">
+        {estActivementPublie({ publie: menu.publie, dateLimiteCommande: new Date(menu.dateLimiteCommande) }) ? (
+          <a
+            href={`/menus/${menu.institutionId}/${menu.id}`}
+            target="_blank"
+            rel="noreferrer"
+            className="text-sm font-medium text-pomme-apple-deep hover:underline"
+          >
+            Voir le menu en ligne ↗
+          </a>
+        ) : (
+          <span className="text-sm font-medium text-pomme-ink/40" title="Disponible une fois le menu publié">
+            Voir le menu en ligne
+          </span>
+        )}
+        <a
+          href={`/api/menus/${menu.id}/pdf`}
+          target="_blank"
+          rel="noreferrer"
+          className="text-sm font-medium text-pomme-apple-deep hover:underline"
+        >
+          Voir le PDF ↗
+        </a>
+      </div>
+
       <div className="space-y-3">
         {menu.journees.map((j) => {
           const repasChoisisIds = j.selections.map((s) => s.repasId);
@@ -87,7 +116,7 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
           return (
             <div key={j.id} className={`rounded-2xl p-4 border-2 ${estVide ? 'border-status-critical/30 bg-status-critical/5' : 'border-transparent bg-white shadow-card'}`}>
               <div className="flex items-center gap-2 mb-3">
-                <span className="text-sm font-bold text-pomme-ink">{j.jourSemaine} {new Date(j.date).getDate()}</span>
+                <span className="text-sm font-bold text-pomme-ink">{j.jourSemaine} {jourDuMoisUTC(j.date)}</span>
                 {estVide && <span className="text-[10px] font-semibold text-status-critical bg-status-critical/10 px-2 py-0.5 rounded-full">Repas requis</span>}
               </div>
 
@@ -112,25 +141,13 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
                   </select>
                 </div>
               )}
-
-              {multiInstitutions && (
-                <div className="mt-2.5 flex flex-wrap gap-1.5 items-center">
-                  <span className="text-xs font-medium text-pomme-ink/60">Applique à :</span>
-                  {/* TODO Claude Code : brancher sur PATCH seulementPourInstitutions */}
-                  {menu.institutions.map((mi) => (
-                    <span key={mi.institutionId} className="text-xs font-medium bg-pomme-soft text-pomme-ink/80 rounded-full px-2.5 py-0.5">
-                      {mi.institution.nom}
-                    </span>
-                  ))}
-                </div>
-              )}
             </div>
           );
         })}
       </div>
 
       <p className="text-xs font-medium text-pomme-ink/60">
-        La publication (par institution) se fait depuis la liste des menus, une fois toutes les journées assignées.
+        La publication se fait depuis la liste des menus, une fois toutes les journées assignées.
       </p>
     </div>
   );

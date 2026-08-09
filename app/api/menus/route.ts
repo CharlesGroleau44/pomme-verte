@@ -9,7 +9,7 @@ export async function GET() {
   const menus = await prisma.menu.findMany({
     orderBy: { periodeDebut: 'desc' },
     include: {
-      institutions: { include: { institution: true } },
+      institution: true,
       journees: { include: { selections: true } },
     },
   });
@@ -18,13 +18,18 @@ export async function GET() {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  // Attendu : { periodeDebut, periodeFin, thematique, dateLimiteCommande, institutionIds: string[] }
+  // Attendu : { periodeDebut, periodeFin, thematique, dateLimiteCommande, institutionId }
+  // Un menu appartient à UNE SEULE institution — pour servir le même
+  // contenu à une autre, voir POST /api/menus/[id]/dupliquer.
 
   if (!body.periodeDebut || !body.periodeFin) {
     return NextResponse.json({ error: 'Les dates de début et de fin sont requises.' }, { status: 400 });
   }
-  if (!Array.isArray(body.institutionIds) || body.institutionIds.length === 0) {
-    return NextResponse.json({ error: 'Au moins une institution doit être sélectionnée.' }, { status: 400 });
+  if (!body.dateLimiteCommande) {
+    return NextResponse.json({ error: 'La date limite de commande est requise.' }, { status: 400 });
+  }
+  if (!body.institutionId) {
+    return NextResponse.json({ error: 'Une institution doit être sélectionnée.' }, { status: 400 });
   }
 
   const debut = new Date(body.periodeDebut);
@@ -33,24 +38,18 @@ export async function POST(req: NextRequest) {
 
   const menu = await prisma.menu.create({
     data: {
+      institutionId: body.institutionId,
       periodeDebut: debut,
       periodeFin: fin,
       thematique: body.thematique ?? null,
-      dateLimiteCommande: body.dateLimiteCommande ? new Date(body.dateLimiteCommande) : null,
+      dateLimiteCommande: new Date(body.dateLimiteCommande),
       pdfUrl: body.pdfUrl ?? null,
-      institutions: {
-        create: body.institutionIds.map((institutionId: string) => ({ institutionId, publie: false })),
-      },
       journees: {
-        create: journees.map((j) => ({
-          date: j.date,
-          jourSemaine: j.jourSemaine,
-          seulementPourInstitutions: [],
-        })),
+        create: journees.map((j) => ({ date: j.date, jourSemaine: j.jourSemaine })),
       },
     },
     include: {
-      institutions: { include: { institution: true } },
+      institution: true,
       journees: { include: { selections: true } },
     },
   });

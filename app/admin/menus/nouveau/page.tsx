@@ -14,21 +14,19 @@ export default function NouveauMenuPage() {
   const [fin, setFin] = useState('');
   const [thematique, setThematique] = useState('');
   const [dateLimite, setDateLimite] = useState('');
-  const [institutionIds, setInstitutionIds] = useState<string[]>([]);
+  const [institutionId, setInstitutionId] = useState<string | null>(null);
+  const [enCours, setEnCours] = useState(false);
 
   useEffect(() => {
     fetch('/api/institutions').then((r) => r.json()).then(setInstitutions).catch(() => setInstitutions([]));
   }, []);
 
-  const toggleInstitution = (id: string) => {
-    setInstitutionIds((cur) => (cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id]));
-  };
-
   const creer = async () => {
-    if (!debut || !fin || institutionIds.length === 0) {
-      alert('Date de début, date de fin et au moins une institution sont requis.');
+    if (!debut || !fin || !dateLimite || !institutionId) {
+      alert('Date de début, date de fin, date limite de commande et une institution sont requis.');
       return;
     }
+    setEnCours(true);
     const res = await fetch('/api/menus', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -36,10 +34,11 @@ export default function NouveauMenuPage() {
         periodeDebut: debut,
         periodeFin: fin,
         thematique,
-        dateLimiteCommande: dateLimite || null,
-        institutionIds,
+        dateLimiteCommande: dateLimite,
+        institutionId,
       }),
     });
+    setEnCours(false);
     if (!res.ok) {
       const { error } = await res.json();
       alert(error);
@@ -54,6 +53,30 @@ export default function NouveauMenuPage() {
       <h1 className="text-2xl font-extrabold text-pomme-leaf-deep">Nouveau menu</h1>
 
       <div className="bg-white rounded-2xl shadow-card p-6 space-y-4">
+        <div>
+          <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Institution</span>
+          <p className="text-xs text-pomme-ink/60 mb-2">
+            Un menu appartient à une seule institution — pour servir le même contenu ailleurs,
+            dupliquez-le une fois créé.
+          </p>
+          <div className="flex flex-wrap gap-2">
+            {institutions.filter((i) => i.actif).map((i) => (
+              <button
+                key={i.id}
+                type="button"
+                onClick={() => setInstitutionId((cur) => (cur === i.id ? null : i.id))}
+                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  institutionId === i.id
+                    ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
+                    : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
+                }`}
+              >
+                {i.nom}
+              </button>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <label className="block text-sm font-medium text-pomme-ink/85">
             Date de début
@@ -71,32 +94,17 @@ export default function NouveauMenuPage() {
         </label>
 
         <label className="block text-sm font-medium text-pomme-ink/85">
-          Date limite de commande
-          <input type="date" value={dateLimite} onChange={(e) => setDateLimite(e.target.value)} className={INPUT} />
+          Date limite de commande *
+          <input type="date" required value={dateLimite} onChange={(e) => setDateLimite(e.target.value)} className={INPUT} />
+          <span className="block text-xs text-pomme-ink/60 mt-1 font-medium">Obligatoire — le menu se dépublie automatiquement à cette date, 23h59.</span>
         </label>
 
-        <div>
-          <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Institutions</span>
-          <div className="flex flex-wrap gap-2">
-            {institutions.filter((i) => i.actif).map((i) => (
-              <button
-                key={i.id}
-                type="button"
-                onClick={() => toggleInstitution(i.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
-                  institutionIds.includes(i.id)
-                    ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
-                    : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
-                }`}
-              >
-                {i.nom}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <button onClick={creer} className="bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors">
-          Créer le menu et générer les journées
+        <button
+          onClick={creer}
+          disabled={enCours}
+          className="bg-pomme-apple-deep text-white rounded-xl px-4 py-2.5 text-sm font-semibold shadow-soft hover:bg-pomme-leaf transition-colors disabled:opacity-60"
+        >
+          {enCours ? 'Création…' : 'Créer le menu et générer les journées'}
         </button>
       </div>
     </div>

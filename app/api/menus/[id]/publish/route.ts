@@ -1,42 +1,52 @@
 // app/api/menus/[id]/publish/route.ts
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
-import { menuEstComplet } from '@/lib/menu-logic';
+import { menuEstComplet, finDeJournee } from '@/lib/menu-logic';
 
 /**
- * Bascule la publication d'un menu pour UNE institution précise. La
- * publication est toujours par institution (voir MenuInstitution.publie)
- * — il n'existe pas de statut global "publié" sur le Menu lui-même.
+ * Bascule la publication d'un menu — un seul bouton, puisqu'un menu
+ * n'appartient qu'à une seule institution (voir schema.prisma).
  *
- * Refuse la publication (mais autorise toujours la dépublication)
- * si des journées du menu n'ont pas encore de repas assigné.
+ * Refuse la publication (mais autorise toujours la dépublication) si
+ * des journées n'ont pas encore de repas assigné, OU si la date limite
+ * de commande est déjà passée (republier exigerait d'abord de la
+ * repousser — sans quoi le menu redeviendrait immédiatement invisible,
+ * voir estActivementPublie()).
  */
 export async function POST(req: NextRequest, { params }: { params: { id: string } }) {
   const body = await req.json();
-  // Attendu : { institutionId: string, publie: boolean }
+  // Attendu : { publie: boolean }
 
-  if (!body.institutionId || typeof body.publie !== 'boolean') {
-    return NextResponse.json({ error: 'institutionId et publie (booléen) sont requis.' }, { status: 400 });
+  if (typeof body.publie !== 'boolean') {
+    return NextResponse.json({ error: 'publie (booléen) est requis.' }, { status: 400 });
   }
 
   if (body.publie) {
-    const journees = await prisma.menuJournee.findMany({
-      where: { menuId: params.id },
-      include: { selections: true },
+    const menu = await prisma.menu.findUnique({
+      where: { id: params.id },
+      include: { journees: { include: { selections: true } } },
     });
-    if (!menuEstComplet(journees)) {
+    if (!menu) return NextResponse.json({ error: 'Menu introuvable.' }, { status: 404 });
+
+    if (!menuEstComplet(menu.journees)) {
       return NextResponse.json(
         { error: 'Impossible de publier : au moins une journée du menu n\'a pas de repas assigné.' },
         { status: 422 }
       );
     }
+    if (new Date() > finDeJournee(menu.dateLimiteCommande)) {
+      return NextResponse.json(
+        { error: 'La date limite de commande de ce menu est déjà passée — repoussez-la avant de publier.' },
+        { status: 422 }
+      );
+    }
   }
 
-  const menuInstitution = await prisma.menuInstitution.update({
-    where: { menuId_institutionId: { menuId: params.id, institutionId: body.institutionId } },
+  const menu = await prisma.menu.update({
+    where: { id: params.id },
     data: { publie: body.publie },
     include: { institution: true },
   });
 
-  return NextResponse.json(menuInstitution);
+  return NextResponse.json(menu);
 }

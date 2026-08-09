@@ -19,4 +19,33 @@
   .num-tabular {
     font-variant-numeric: tabular-nums;
   }
+
+  /* Micro-interaction commune à toute carte cliquable (institution, menu,
+     repas, stat) — lift + ombre plus prononcée au survol, retour au clic. */
+  .card-hover {
+    @apply transition-all duration-300 ease-out hover:-translate-y-1 hover:shadow-lifted active:translate-y-0 active:scale-[0.99];
+  }
+
+  /* Retour tactile discret sur les boutons d'action principaux. */
+  .press {
+    @apply transition-transform duration-150 active:scale-[0.97];
+  }
+
+  /* Délais d'entrée échelonnés pour des listes/grilles animées avec
+     animate-fade-in-up — garder l'échelle courte (six crans) pour ne
+     jamais faire attendre une longue liste. */
+  .stagger-1 { animation-delay: 60ms; }
+  .stagger-2 { animation-delay: 120ms; }
+  .stagger-3 { animation-delay: 180ms; }
+  .stagger-4 { animation-delay: 240ms; }
+  .stagger-5 { animation-delay: 300ms; }
+  .stagger-6 { animation-delay: 360ms; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

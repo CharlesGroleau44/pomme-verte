@@ -224,9 +224,9 @@ pas de détour par l'API) :
   menu↔institution est bien publié avant d'afficher quoi que ce soit
   (`notFound()` sinon) — un menuId deviné ne fuite rien.
 
-Le lien menu↔institution existait déjà (`MenuInstitution` + son
-`publie` par institution, posé dès la création du menu) — ce qui manquait
-était uniquement la page d'affichage public, pas l'architecture de données.
+Le lien menu↔institution était alors une relation n:n (`MenuInstitution`,
+`publie` par institution) — voir plus bas (2026-08-07) pour son remplacement
+par une FK unique.
 
 `middleware.ts` exclut maintenant `/menus` (l'espace public) et
 `/api/photos` (logos et photos de repas, affichés sur ces pages publiques et
@@ -240,6 +240,125 @@ aussi les futurs comptes-parents (Phase 2, commandes en ligne).
 vente) — ce dernier appartient au client et nécessite un accès DNS que
 Charles n'a pas encore donné. À migrer quand ce sera confirmé.
 
+## 2026-08-07 — Un menu, une seule institution (+ duplication, dépublication automatique)
+
+**Pourquoi** — le lien n:n `MenuInstitution` permettait en théorie un menu
+partagé par plusieurs institutions, mais l'usage réel n'en avait pas besoin
+et rendait le montage plus confus (à qui s'applique quoi ?). Charles a
+demandé une protection structurelle : un menu appartient à **une seule**
+institution, point. Servir le même contenu ailleurs se fait en dupliquant.
+
+**Modèle de données** — `Menu.institutionId` est maintenant une **FK directe
+requise** (`onDelete: Cascade`), plus une relation n:n. `MenuInstitution` et
+`MenuJournee.seulementPourInstitutions` sont supprimés — le second n'avait
+plus de sens dès qu'un menu ne peut être lié qu'à une institution.
+`Menu.dateLimiteCommande` est aussi passée de facultative à **obligatoire**
+(`DateTime @db.Date`, sans `?`) : elle gouverne maintenant la dépublication
+automatique (voir plus bas), un menu sans date limite ne pourrait jamais se
+dépublier tout seul.
+
+**Dépublication automatique à la date limite, 23h59** — plutôt qu'une tâche
+planifiée (aucune infra cron/minuterie dans cette app), l'état visible est
+**calculé à la lecture** : `estActivementPublie(menu)` dans
+`lib/menu-logic.ts` renvoie `publie && new Date() <= finDeJournee(dateLimiteCommande)`.
+`publie` reste l'intention de l'admin en base; c'est cet état calculé, pas
+le booléen brut, qui gouverne tout ce qui est montré aux parents (pages
+publiques) et qui bloque une republication tardive (`POST
+/api/menus/[id]/publish` renvoie 422 si la date limite est déjà passée).
+Avantage sur un cron : toujours correct même après un redémarrage serveur,
+aucun service supplémentaire à surveiller.
+
+**Duplication** — nouvelle route `POST /api/menus/[id]/dupliquer`
+(`{institutionId}`) : copie complète du menu (journées + sélections, avec
+leurs overrides nom/description/3 prix) vers une autre institution. Le
+duplicata part toujours **non publié**, peu importe l'état de l'original.
+UI : bouton « Dupliquer » sur chaque ligne de la liste des menus, ouvre un
+petit sélecteur d'institution inline.
+
+**UI admin** — le sélecteur d'institution à la création d'un menu est passé
+de chips multi-sélection à **sélection unique**. La liste des menus
+remplace les anciens badges de publication par institution par **un seul
+gros bouton** : vert « PUBLIÉ » / rouge « NON PUBLIÉ » (couleur basée sur
+`estActivementPublie`, pas sur le booléen brut — un menu publié mais
+expiré affiche NON PUBLIÉ avec un avertissement explicite plutôt que de
+laisser croire qu'il est encore commandable). La section « Applique à » du
+montage jour par jour a disparu (n'avait plus de sens à institution unique).
+
+**Migration** — le seul menu de test en base (lié à Boisé-Fabi via
+l'ancienne table) a été reporté manuellement vers la nouvelle colonne
+`institutionId` avant le `prisma db push --accept-data-loss`, pour ne pas le
+perdre. Confirmé avec Charles avant exécution. Aucune perte de donnée réelle
+(le menu de test et ses sélections ont survécu).
+
+## 2026-08-07 — PDF par menu, commandes en ligne (compte + invité), console de traitement
+
+**PDF brandé par menu** — nouvelle dépendance `@react-pdf/renderer` (+ `sharp`
+pour redimensionner les photos avant de les embarquer : sans ça, un menu de
+10 photos produisait un PDF de 15-20 Mo, réduit à ~50 Ko). `GET
+/api/menus/[id]/pdf` reconstruit le PDF à la demande (pas de fichier stocké
+— toujours à jour si le menu change après publication) : le menu jour par
+jour, PLUS un coupon-réponse imprimable calqué sur le vrai formulaire papier
+actuel du traiteur (`NDL21.1.pdf`, fourni par Charles) — mêmes champs :
+cases à cocher repas/taille par journée en colonnes par semaine,
+Quantité/Crédit/Total, mode de paiement, information élève (niveau,
+allergies), information parent. Accessible sans connexion si le menu est
+activement publié (même règle que la page web), toujours accessible à
+l'admin pour prévisualiser un brouillon. Police Nunito embarquée (fichiers
+statiques dans `public/fonts/`, comme pour l'artifact de démo).
+
+**Commandes en ligne** — Charles a choisi (1) pas de paiement en ligne pour
+cette version (le mode de paiement est capturé, l'encaissement reste hors
+ligne comme avant) et (2) compte parent dès maintenant, complété ensuite par
+un mode invité. Nouveaux modèles : `CompteParent` (courriel/mot de passe
+scrypt, jamais le même secret ni le même cookie que l'admin — voir
+`lib/parent-session.ts`, cookie `pv_parent`), `Enfant` (rattaché à une
+institution précise, niveau, allergies), `Commande`
+(`@@unique([enfantId, menuId])` — une seule par enfant par menu, on la
+MODIFIE en resoumettant plutôt que d'en créer une seconde, comme le
+permettait déjà le coupon papier), `LigneCommande` (un choix par journée).
+- **Parcours connecté** : `/parent/inscription`, `/parent/connexion`,
+  `/parent/compte` (gérer les enfants, historique, annulation). Le
+  formulaire de commande sur `/menus/[institutionId]/[menuId]` précharge la
+  commande existante s'il y en a une pour l'enfant sélectionné.
+- **Parcours invité** : le formulaire complet (élève + parent + paiement)
+  se remplit en même temps que le choix des repas, sans compte. Un
+  `CompteParent`/`Enfant` est créé (ou retrouvé par courriel) en coulisse
+  avec un mot de passe aléatoire inutilisable — l'invité ne peut jamais se
+  connecter avec, seulement soumettre une nouvelle commande invité.
+- Validation et écriture partagées entre les deux routes
+  (`POST /api/parent/commandes` et `POST /api/parent/commandes-invite`) via
+  `lib/commandes.ts` : le menu doit être activement publié, chaque journée/
+  sélection soumise doit vraiment appartenir à ce menu.
+- `middleware.ts` exclut maintenant `/parent` et `/api/parent` de
+  l'authentification admin — monde totalement séparé, sa propre vérification
+  de session dans chaque route/page.
+
+**Console de traitement des commandes** — `/admin/commandes` (nouvel onglet
+de navigation) : stat tiles (commandes, repas, revenu estimé, non payé),
+filtre par institution et par menu, statut **PAYÉ/NON PAYÉ** par commande
+(`Commande.paye`/`payeLe`, `PATCH /api/commandes/[id]`), **rapport de
+préparation** — vue agrégée par journée → plat → taille → quantité,
+construite pour remplacer le tri manuel des enveloppes le matin en cuisine.
+Allergies mises en évidence partout (liste et rapport). Exports : CSV
+(généré côté client depuis les commandes déjà chargées, aucune route
+dédiée) et PDF brandé du rapport (`GET
+/api/commandes/rapport-pdf?menuId=...`, `lib/pdf/RapportDocument.tsx`,
+même infra PDF que le menu).
+
+**Piège rencontré** : le format de date `@db.Date` (minuit UTC) s'affichait
+correctement partout tant que le rendu était server-side (le VPS tourne en
+`Etc/UTC`), mais un composant CLIENT (`'use client'`) qui fait
+`new Date(iso).getDate()` recule d'un jour dans le fuseau horaire du
+navigateur — et tous les vrais parents sont au Québec (UTC-4/-5). Repéré en
+testant le nouveau formulaire de commande (jour affiché différent du jour
+réel). Fix : `jourDuMoisUTC()` dans `lib/menu-logic.ts` (utilise
+`getUTCDate()`), appliqué aux 3 endroits concernés
+(`FormulaireCommande.tsx`, `admin/commandes/page.tsx`,
+`admin/menus/[id]/page.tsx`) + `timeZone: 'UTC'` sur le `toLocaleDateString`
+de la liste des menus admin. Réflexe à garder : toute nouvelle date-jour
+affichée dans un composant client doit passer par cette fonction, jamais
+`new Date(iso).getDate()` directement.
+
 ## Restes à faire
 
 - **Sauvegarde de la base Postgres ET du dossier `data/photos/`** :
@@ -249,11 +368,14 @@ Charles n'a pas encore donné. À migrer quand ce sera confirmé.
   des données réelles de production (au minimum un `pg_dump` quotidien avec
   rotation + une copie du dossier photos, sur le modèle des autres apps).
 - Tout ce que le README du projet liste déjà sous « Ce qui reste à faire »
-  (exception par institution dans l'UI du montage de menu — le champ existe
-  côté API, duplication de menu, notifications UI, vraie authentification
-  applicative).
+  (notifications UI au lieu de `alert()`, vraie authentification applicative).
 - Décider si cet hébergement `pommeverte.charlesgroleau.com` reste temporaire
   ou devient l'adresse définitive (domaine propre au traiteur, etc.).
-- Phase 2 de la présentation de vente (commandes en ligne, paiement) — hors
-  scope du travail actuel, qui couvre la Phase 1 (fondations : institutions,
-  repas, menus, publication).
+- Phase 2 de la présentation de vente : commandes en ligne FAIT 2026-08-07
+  (compte parent + invité, voir plus haut) ; paiement en ligne reste hors
+  scope (décision explicite de Charles pour cette version).
+- Notifications courriel (confirmation de commande au parent, alerte
+  nouvelle commande à l'équipe) — pas encore construites, demandent une
+  décision d'infrastructure (SMTP ou service tiers).
+- Récupération de mot de passe parent — sans ça, un compte créé en mode
+  invité ne peut jamais devenir un vrai compte connectable.

@@ -5,6 +5,19 @@
 const JOURS_SEMAINE = ['Dimanche', 'Lundi', 'Mardi', 'Mercredi', 'Jeudi', 'Vendredi', 'Samedi'];
 
 /**
+ * Les dates de journée (@db.Date) sont stockées à minuit UTC. Le serveur
+ * tourne en UTC donc un rendu server-side les affiche correctement, mais
+ * un composant client exécuté dans un navigateur au Québec (UTC-4/-5)
+ * reculerait d'un jour avec `new Date(iso).getDate()` — TOUJOURS utiliser
+ * cette fonction (ou getUTCDate() directement) pour un affichage de date
+ * de journée côté client.
+ */
+export function jourDuMoisUTC(date: Date | string): number {
+  const d = typeof date === 'string' ? new Date(date) : date;
+  return d.getUTCDate();
+}
+
+/**
  * Génère un jour par jour ouvrable (lundi à vendredi) entre deux
  * dates inclusivement. Utilisé à la création d'un menu pour peupler
  * automatiquement les MenuJournee — sans sélection de repas, à
@@ -66,13 +79,21 @@ export function menuEstComplet(journees: { selections: unknown[] }[]) {
   return journees.length > 0 && journees.every((j) => j.selections.length > 0);
 }
 
+/** La date limite de commande couvre toute sa journée — jusqu'à 23h59min59s. */
+export function finDeJournee(date: Date): Date {
+  return new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate(), 23, 59, 59, 999));
+}
+
 /**
- * Détermine si une journée s'applique à une institution donnée : un
- * tableau seulementPourInstitutions vide signifie "toutes les
- * institutions du menu" ; sinon, seules les institutions listées
- * voient cette journée. Utilisé côté formulaire de commande (module
- * suivant) — inclus ici car la règle est définie au niveau du menu.
+ * Un menu n'est réellement visible/commandable que si l'admin l'a publié
+ * ET que sa date limite de commande n'est pas encore passée — passé
+ * cette date à 23h59, le menu redevient invisible même si "publie" est
+ * toujours vrai en base, pour qu'aucune commande n'entre en retard.
+ * C'est cet état-ci, pas le simple booléen "publie", qui doit gouverner
+ * tout ce qui est montré aux parents. dateLimiteCommande est obligatoire
+ * à la création du menu (voir schema.prisma) — jamais nulle ici.
  */
-export function journeeApplicableA(journee: { seulementPourInstitutions: string[] }, institutionId: string) {
-  return journee.seulementPourInstitutions.length === 0 || journee.seulementPourInstitutions.includes(institutionId);
+export function estActivementPublie(menu: { publie: boolean; dateLimiteCommande: Date }): boolean {
+  if (!menu.publie) return false;
+  return new Date() <= finDeJournee(menu.dateLimiteCommande);
 }

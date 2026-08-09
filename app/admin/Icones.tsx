@@ -42,6 +42,25 @@ export function IconeMenu({ className }: Props) {
   );
 }
 
+export function IconeCommande({ className }: Props) {
+  return (
+    <svg {...base} className={className}>
+      <path d="M6 2h9l4 4v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z" />
+      <path d="M14 2v5h5" />
+      <path d="M8 13h8M8 17h5" />
+    </svg>
+  );
+}
+
+export function IconeParent({ className }: Props) {
+  return (
+    <svg {...base} className={className}>
+      <circle cx="12" cy="7" r="4" />
+      <path d="M4 21v-2a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v2" />
+    </svg>
+  );
+}
+
 export function IconeDeconnexion({ className }: Props) {
   return (
     <svg {...base} className={className}>

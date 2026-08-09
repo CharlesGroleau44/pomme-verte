@@ -18,6 +18,8 @@ export type FormeFiche = {
   telephoneContact: string;
   courrielContact: string;
   notes: string;
+  offreFondation: boolean;
+  offreFormatPetit: boolean;
 };
 
 export const FICHE_VIDE: FormeFiche = {
@@ -34,6 +36,8 @@ export const FICHE_VIDE: FormeFiche = {
   telephoneContact: '',
   courrielContact: '',
   notes: '',
+  offreFondation: false,
+  offreFormatPetit: false,
 };
 
 const INPUT = 'border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow';
@@ -45,7 +49,7 @@ export default function ChampsFiche({
   form: FormeFiche;
   setForm: (f: FormeFiche) => void;
 }) {
-  const champ = (cle: keyof FormeFiche) => ({
+  const champ = (cle: Exclude<keyof FormeFiche, 'offreFondation' | 'offreFormatPetit'>) => ({
     value: form[cle] ?? '',
     onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm({ ...form, [cle]: e.target.value }),
@@ -102,6 +106,30 @@ export default function ChampsFiche({
         Notes / autres informations
         <textarea {...champ('notes')} rows={3} className={`w-full mt-1 ${INPUT}`} />
       </label>
+
+      <div>
+        <span className="block text-sm font-semibold text-pomme-ink/85 mb-2">Commande en ligne — options offertes</span>
+        <div className="space-y-2">
+          <label className="flex items-center gap-2.5 text-sm font-medium text-pomme-ink/85">
+            <input
+              type="checkbox"
+              checked={form.offreFormatPetit}
+              onChange={(e) => setForm({ ...form, offreFormatPetit: e.target.checked })}
+              className="h-4 w-4 rounded border-pomme-line/60 text-pomme-apple-deep focus:ring-pomme-apple-mid/40"
+            />
+            Offre le format &laquo;&nbsp;Petit repas&nbsp;&raquo; (en plus de Régulier / Portion+)
+          </label>
+          <label className="flex items-center gap-2.5 text-sm font-medium text-pomme-ink/85">
+            <input
+              type="checkbox"
+              checked={form.offreFondation}
+              onChange={(e) => setForm({ ...form, offreFondation: e.target.checked })}
+              className="h-4 w-4 rounded border-pomme-line/60 text-pomme-apple-deep focus:ring-pomme-apple-mid/40"
+            />
+            Offre le mode de paiement &laquo;&nbsp;Fondation&nbsp;&raquo;
+          </label>
+        </div>
+      </div>
     </div>
   );
 }
