@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { idParentDepuisCookie } from '@/lib/parent-session';
 import { hacherMotDePasse, verifierMotDePasse } from '@/lib/parent-auth';
 import { MODES_PAIEMENT_VALIDES } from '@/lib/commandes';
+import { soldeEntente, etatVersement } from '@/lib/entente';
+import { soldePrepaye } from '@/lib/solde-prepaye';
 
 export const dynamic = 'force-dynamic';
 
@@ -17,14 +19,31 @@ export async function GET(req: NextRequest) {
   });
   if (!parent) return NextResponse.json({ error: 'Non connecté.' }, { status: 401 });
 
+  // Entente annuelle : par enfant depuis le 17 août 2026 (voir
+  // lib/entente.ts) — chaque enfant porte son propre forfait/solde, le
+  // parent reste sur un seul compte.
+  const enfants = await Promise.all(
+    parent.enfants.map(async (e) => ({
+      ...e,
+      entente: e.prepayeAnnuel
+        ? {
+            ...(await soldeEntente(e.id)),
+            versements: e.ententeVersements,
+            versement2: etatVersement(e.ententeDate2eVersement, e.ententeVerse2Paye),
+          }
+        : null,
+    }))
+  );
+
   return NextResponse.json({
     id: parent.id,
     courriel: parent.courriel,
     nom: parent.nom,
     telephone: parent.telephone,
-    prepayeAnnuel: parent.prepayeAnnuel,
+    soldePrepayeActif: parent.soldePrepayeActif,
     modePaiementPrefere: parent.modePaiementPrefere,
-    enfants: parent.enfants,
+    enfants,
+    soldePrepaye: parent.soldePrepayeActif ? await soldePrepaye(parent.id) : null,
   });
 }
 
@@ -90,7 +109,6 @@ export async function PATCH(req: NextRequest) {
     courriel: parent.courriel,
     nom: parent.nom,
     telephone: parent.telephone,
-    prepayeAnnuel: parent.prepayeAnnuel,
     modePaiementPrefere: parent.modePaiementPrefere,
   });
 }

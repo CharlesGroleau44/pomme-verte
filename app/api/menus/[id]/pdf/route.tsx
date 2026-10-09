@@ -1,8 +1,10 @@
 // app/api/menus/[id]/pdf/route.ts
 // Version PDF brandée d'un menu — pour les parents qui ne peuvent pas
 // commander en ligne. Accessible SANS connexion (voir middleware.ts)
-// mais seulement si le menu est activement publié ; l'équipe (admin
-// connectée) peut toujours la prévisualiser, même en brouillon.
+// mais seulement si le menu est visible (estMenuVisible — voir
+// lib/menu-logic.ts, distinct de la date limite de commande depuis le
+// 8 septembre 2026) ; l'équipe (admin connectée) peut toujours la
+// prévisualiser, même en brouillon.
 import { NextRequest, NextResponse } from 'next/server';
 import { readFile } from 'fs/promises';
 import path from 'path';
@@ -10,8 +12,8 @@ import sharp from 'sharp';
 import { renderToBuffer } from '@react-pdf/renderer';
 import { prisma } from '@/lib/prisma';
 import { PHOTOS_DIR } from '@/lib/photos';
-import { estActivementPublie } from '@/lib/menu-logic';
-import { jetonValide } from '@/lib/session';
+import { estMenuVisible } from '@/lib/menu-logic';
+import { sessionValide } from '@/lib/session';
 import MenuDocument, { type PhotoResolue } from '@/lib/pdf/MenuDocument';
 
 export const dynamic = 'force-dynamic';
@@ -54,7 +56,7 @@ async function resoudrePhoto(url: string | null, cote: number, mode: 'cover' | '
 async function estAdminConnecte(req: NextRequest) {
   const secret = process.env.SESSION_SECRET ?? 'dev-secret-non-securise';
   const jeton = req.cookies.get('pv_session')?.value;
-  return jetonValide(jeton, secret);
+  return (await sessionValide(jeton, secret)) !== null;
 }
 
 export async function GET(req: NextRequest, { params }: { params: { id: string } }) {
@@ -62,6 +64,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
     where: { id: params.id },
     include: {
       institution: true,
+      thematiqueRef: true,
       journees: {
         include: { selections: { include: { repas: true }, orderBy: { createdAt: 'asc' } } },
         orderBy: { date: 'asc' },
@@ -71,7 +74,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   if (!menu) return NextResponse.json({ error: 'Menu introuvable.' }, { status: 404 });
 
-  const accesAutorise = (await estAdminConnecte(req)) || estActivementPublie(menu);
+  const accesAutorise = (await estAdminConnecte(req)) || estMenuVisible(menu);
   if (!accesAutorise) {
     return NextResponse.json({ error: 'Ce menu n\'est pas publié.' }, { status: 404 });
   }
@@ -112,7 +115,7 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
 
   const buffer = await renderToBuffer(
     <MenuDocument
-      thematique={menu.thematique}
+      thematique={menu.thematiqueRef?.nom ?? null}
       periodeDebut={menu.periodeDebut}
       periodeFin={menu.periodeFin}
       dateLimiteCommande={menu.dateLimiteCommande}
@@ -120,6 +123,8 @@ export async function GET(req: NextRequest, { params }: { params: { id: string }
       institution={{
         nom: menu.institution.nom, telephone: menu.institution.telephone, courriel: menu.institution.courriel, logo: logoInstitution,
         offreFondation: menu.institution.offreFondation, offreFormatPetit: menu.institution.offreFormatPetit,
+        prixRepasDepannage: menu.institution.prixRepasDepannage?.toFixed(2) ?? null,
+        politiques: menu.institution.politiques,
       }}
       logoTraiteur={logoTraiteur}
       journees={journees}

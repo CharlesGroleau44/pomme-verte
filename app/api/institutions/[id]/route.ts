@@ -3,10 +3,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 
 const CHAMPS_FICHE = [
-  'nom', 'logoUrl', 'actif', 'adresse', 'ville', 'province', 'codePostal',
+  'nom', 'logoUrl', 'prospectusUrl', 'actif', 'adresse', 'ville', 'province', 'codePostal',
   'telephone', 'courriel', 'siteWeb',
   'personneContact', 'telephoneContact', 'courrielContact',
-  'notes',
+  'notes', 'politiques',
 ] as const;
 
 export async function GET(_req: NextRequest, { params }: { params: { id: string } }) {
@@ -24,6 +24,19 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
   }
   if ('offreFondation' in body) data.offreFondation = !!body.offreFondation;
   if ('offreFormatPetit' in body) data.offreFormatPetit = !!body.offreFormatPetit;
+  if ('niveauxFormatPetit' in body) {
+    data.niveauxFormatPetit = Array.isArray(body.niveauxFormatPetit) ? body.niveauxFormatPetit : [];
+  }
+  // Prix du repas dépannage : champ Decimal, traité à part car le formulaire
+  // envoie une chaîne — vide signifie « pas de repas dépannage annoncé »,
+  // pas « 0 $ ».
+  if ('prixRepasDepannage' in body) {
+    const brut = String(body.prixRepasDepannage ?? '').replace(',', '.').trim();
+    data.prixRepasDepannage = brut === '' || Number.isNaN(Number(brut)) ? null : brut;
+  }
+  if ('calendrierScolaireId' in body) {
+    data.calendrierScolaireId = body.calendrierScolaireId || null;
+  }
 
   const institution = await prisma.institution.update({
     where: { id: params.id },

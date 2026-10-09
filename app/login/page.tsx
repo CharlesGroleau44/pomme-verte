@@ -2,6 +2,7 @@
 // app/login/page.tsx
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { CHAMP } from '@/lib/ui';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -52,7 +53,7 @@ export default function LoginPage() {
               value={usager}
               onChange={(e) => setUsager(e.target.value)}
               autoFocus
-              className="w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow"
+              className={CHAMP}
             />
           </label>
           <label className="block text-sm font-medium text-pomme-ink/85">
@@ -61,7 +62,7 @@ export default function LoginPage() {
               type="password"
               value={motDePasse}
               onChange={(e) => setMotDePasse(e.target.value)}
-              className="w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow"
+              className={CHAMP}
             />
           </label>
         </div>

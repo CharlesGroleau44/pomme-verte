@@ -8,6 +8,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import CarteSelection, { type Selection } from './CarteSelection';
 import { estActivementPublie, jourDuMoisUTC } from '@/lib/menu-logic';
+import { photo } from '@/lib/images';
 
 type Repas = { id: string; nom: string };
 type Journee = {
@@ -19,29 +20,57 @@ type Journee = {
 type MenuDetail = {
   id: string;
   institutionId: string;
-  thematique: string | null;
+  thematiqueId: string | null;
+  thematiqueRef: { id: string; nom: string; photoUrl: string | null } | null;
   publie: boolean;
   dateLimiteCommande: string;
+  datePublication: string | null;
   institution: { id: string; nom: string };
   journees: Journee[];
   complet: boolean;
 };
 
+type Thematique = { id: string; nom: string; photoUrl: string | null };
+
 export default function MenuDetailPage({ params }: { params: { id: string } }) {
   const [menu, setMenu] = useState<MenuDetail | null>(null);
   const [repasInventaire, setRepasInventaire] = useState<Repas[]>([]);
+  const [thematiques, setThematiques] = useState<Thematique[]>([]);
   const [ajoutEnCours, setAjoutEnCours] = useState<string | null>(null);
 
   const charger = async () => {
-    const [menuRes, repasRes] = await Promise.all([
+    const [menuRes, repasRes, themeRes] = await Promise.all([
       fetch(`/api/menus/${params.id}`),
       fetch('/api/repas'),
+      fetch('/api/thematiques'),
     ]);
     setMenu(await menuRes.json());
     setRepasInventaire(await repasRes.json());
+    setThematiques(await themeRes.json());
   };
 
   useEffect(() => { charger(); }, [params.id]);
+
+  // Le menu pointe vers une thématique partagée : on change ici le
+  // RATTACHEMENT, pas le nom ni l'image (qui se modifient une seule fois
+  // dans /admin/thematiques et se propagent à toutes les écoles).
+  const changerThematique = async (thematiqueId: string | null) => {
+    await fetch(`/api/menus/${params.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ thematiqueId }),
+    });
+    charger();
+  };
+
+  const changerDatePublication = async (datePublication: string | null) => {
+    await fetch(`/api/menus/${params.id}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ datePublication }),
+    });
+    charger();
+  };
 
   const ajouterSelection = async (journeeId: string, repasId: string) => {
     if (!repasId) return;
@@ -66,7 +95,7 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
     <div className="max-w-2xl space-y-5">
       <div className="flex items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-2xl font-extrabold text-pomme-leaf-deep truncate">{menu.thematique || 'Menu'}</h1>
+          <h1 className="text-2xl font-extrabold text-pomme-leaf-deep truncate">{menu.thematiqueRef?.nom || 'Menu'}</h1>
           <p className="text-sm font-medium text-pomme-ink/65 truncate">{menu.institution.nom}</p>
         </div>
         {menu.complet ? (
@@ -82,7 +111,11 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
       </div>
 
       <div className="flex flex-wrap gap-4">
-        {estActivementPublie({ publie: menu.publie, dateLimiteCommande: new Date(menu.dateLimiteCommande) }) ? (
+        {estActivementPublie({
+          publie: menu.publie,
+          dateLimiteCommande: new Date(menu.dateLimiteCommande),
+          datePublication: menu.datePublication ? new Date(menu.datePublication) : null,
+        }) ? (
           <a
             href={`/menus/${menu.institutionId}/${menu.id}`}
             target="_blank"
@@ -92,7 +125,14 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
             Voir le menu en ligne ↗
           </a>
         ) : (
-          <span className="text-sm font-medium text-pomme-ink/40" title="Disponible une fois le menu publié">
+          <span
+            className="text-sm font-medium text-pomme-ink/40"
+            title={
+              menu.publie && menu.datePublication && new Date() < new Date(menu.datePublication)
+                ? `S'ouvrira automatiquement le ${new Date(menu.datePublication).toLocaleDateString('fr-CA', { timeZone: 'UTC' })}`
+                : 'Disponible une fois le menu publié'
+            }
+          >
             Voir le menu en ligne
           </span>
         )}
@@ -104,6 +144,52 @@ export default function MenuDetailPage({ params }: { params: { id: string } }) {
         >
           Voir le PDF ↗
         </a>
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-card p-5">
+        <span className="block text-sm font-semibold text-pomme-ink/85 mb-1">Thématique</span>
+        <p className="text-xs text-pomme-ink/60 mb-3">
+          Pour changer le nom ou l&apos;image d&apos;une thématique — ce qui met à jour toutes les
+          écoles d&apos;un coup — passez par{' '}
+          <Link href="/admin/thematiques" className="text-pomme-apple-deep font-semibold hover:underline">Thématiques</Link>.
+        </p>
+        {thematiques.length === 0 ? (
+          <p className="text-xs font-medium text-pomme-ink/60">
+            Aucune thématique créée pour l&apos;instant.
+          </p>
+        ) : (
+          <div className="flex flex-wrap gap-2">
+            {thematiques.map((t) => (
+              <button
+                key={t.id}
+                type="button"
+                onClick={() => changerThematique(menu.thematiqueId === t.id ? null : t.id)}
+                className={`inline-flex items-center gap-2 min-h-[44px] px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
+                  menu.thematiqueId === t.id
+                    ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
+                    : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
+                }`}
+              >
+                {t.photoUrl && <img {...photo(t.photoUrl, 160)} alt="" className="w-6 h-6 object-contain" />}
+                {t.nom}
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="bg-white rounded-2xl shadow-card p-5">
+        <span className="block text-sm font-semibold text-pomme-ink/85 mb-1">Date de publication</span>
+        <p className="text-xs text-pomme-ink/60 mb-3">
+          Le menu reste invisible aux parents jusqu&rsquo;à cette date, puis s&rsquo;ouvre automatiquement — utile
+          pour un menu construit à l&rsquo;avance. Laissez vide pour qu&rsquo;il soit visible dès que publié.
+        </p>
+        <input
+          type="date"
+          value={menu.datePublication ? menu.datePublication.slice(0, 10) : ''}
+          onChange={(e) => changerDatePublication(e.target.value || null)}
+          className="border border-pomme-line/50 rounded-lg px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40"
+        />
       </div>
 
       <div className="space-y-3">

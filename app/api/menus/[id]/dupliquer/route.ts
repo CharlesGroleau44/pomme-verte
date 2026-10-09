@@ -25,8 +25,9 @@ export async function POST(req: NextRequest, { params }: { params: { id: string 
       institutionId: body.institutionId,
       periodeDebut: original.periodeDebut,
       periodeFin: original.periodeFin,
-      thematique: original.thematique,
+      thematiqueId: original.thematiqueId,
       dateLimiteCommande: original.dateLimiteCommande,
+      datePublication: original.datePublication,
       pdfUrl: original.pdfUrl,
       publie: false,
       journees: {

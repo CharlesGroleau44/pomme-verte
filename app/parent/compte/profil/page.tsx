@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { useParentCompte } from '../ContexteParent';
 import { IconeCadenas, IconeModifier } from '../../Icones';
+import { CHAMP } from '@/lib/ui';
 
-const INPUT = 'w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow';
+const INPUT = CHAMP;
 
 export default function ProfilPage() {
   const { parent, recharger } = useParentCompte();
@@ -57,9 +58,11 @@ export default function ProfilPage() {
 
   return (
     <div className="space-y-5 max-w-2xl">
-      {parent.prepayeAnnuel && (
+      {parent.enfants.some((e) => e.prepayeAnnuel) && (
         <div className="animate-fade-in-up bg-status-good/10 text-status-good rounded-2xl px-5 py-3.5 text-sm font-semibold flex items-center gap-2">
-          ✓ Votre facturation est prépayée à l’année — configuré directement par le traiteur.
+          ✓ {parent.enfants.filter((e) => e.prepayeAnnuel).length > 1
+            ? 'Certains de vos enfants ont une entente annuelle'
+            : 'Un de vos enfants a une entente annuelle'} — configurée directement par le traiteur.
         </div>
       )}
 
@@ -67,7 +70,7 @@ export default function ProfilPage() {
         <div className="flex items-center justify-between">
           <h2 className="text-xl font-display font-semibold text-pomme-leaf-deep">Mes informations</h2>
           {!edition && (
-            <button onClick={() => { setEdition(true); setSucces(false); }} className="flex items-center gap-1.5 text-sm font-semibold text-pomme-apple-deep hover:underline">
+            <button onClick={() => { setEdition(true); setSucces(false); }} className="press inline-flex items-center gap-1.5 min-h-[44px] -ml-1 px-1 text-sm font-semibold text-pomme-apple-deep hover:underline">
               <IconeModifier /> Modifier
             </button>
           )}

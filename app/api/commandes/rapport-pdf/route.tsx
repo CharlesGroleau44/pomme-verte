@@ -13,13 +13,13 @@ import type { PhotoResolue } from '@/lib/pdf/MenuDocument';
 
 export const dynamic = 'force-dynamic';
 
-const LABEL_TAILLE: Record<string, string> = { PETIT: 'Petit repas', REGULIER: 'Repas régulier', DEUXIEME_SERVICE: '+ 2ᵉ service' };
+const LABEL_TAILLE: Record<string, string> = { PETIT: 'Petit repas', REGULIER: 'Repas régulier', DEUXIEME_SERVICE: 'Portion +' };
 
 export async function GET(req: NextRequest) {
   const menuId = req.nextUrl.searchParams.get('menuId');
   if (!menuId) return NextResponse.json({ error: 'menuId est requis.' }, { status: 400 });
 
-  const menu = await prisma.menu.findUnique({ where: { id: menuId }, include: { institution: true } });
+  const menu = await prisma.menu.findUnique({ where: { id: menuId }, include: { institution: true, thematiqueRef: true } });
   if (!menu) return NextResponse.json({ error: 'Menu introuvable.' }, { status: 404 });
 
   const commandes = await prisma.commande.findMany({
@@ -60,7 +60,7 @@ export async function GET(req: NextRequest) {
   const buffer = await renderToBuffer(
     <RapportDocument
       institutionNom={menu.institution.nom}
-      thematique={menu.thematique}
+      thematique={menu.thematiqueRef?.nom ?? null}
       logoTraiteur={logoTraiteur}
       journees={journees}
       allergies={allergies}

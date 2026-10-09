@@ -2,8 +2,9 @@
 // app/parent/mot-de-passe-oublie/page.tsx
 import { useState } from 'react';
 import Link from 'next/link';
+import { CHAMP } from '@/lib/ui';
 
-const INPUT = 'w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow';
+const INPUT = CHAMP;
 
 export default function MotDePasseOubliePage() {
   const [courriel, setCourriel] = useState('');

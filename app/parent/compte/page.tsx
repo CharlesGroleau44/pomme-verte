@@ -6,6 +6,7 @@ import { jourDuMoisUTC } from '@/lib/menu-logic';
 import { useParentCompte } from './ContexteParent';
 import { totalCommande, LABEL_PAIEMENT } from './utils';
 import { IconeProfil, IconeEnfants, IconePaiement } from '../Icones';
+import AlerteVersement from './AlerteVersement';
 
 export default function TableauDeBordPage() {
   const { parent, commandes } = useParentCompte();
@@ -19,6 +20,11 @@ export default function TableauDeBordPage() {
   const repasCommandes = commandes.reduce((s, c) => s + c.lignes.length, 0);
   const recentes = [...commandes].slice(0, 4);
 
+  // Entente annuelle par enfant depuis le 17 août 2026 (voir lib/entente.ts)
+  // — un même compte peut avoir plusieurs enfants avec leur propre forfait ;
+  // le tableau de bord agrège l'ensemble pour une vue d'un coup d'œil.
+  const enfantsAvecEntente = parent.enfants.filter((e) => e.prepayeAnnuel && e.entente);
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -26,13 +32,31 @@ export default function TableauDeBordPage() {
         <div className="animate-fade-in-up stagger-1"><StatTile label="Commandes ce mois-ci" valeur={commandesCeMois.length} /></div>
         <div className="animate-fade-in-up stagger-2"><StatTile label="Repas commandés" valeur={repasCommandes} /></div>
         <div className="animate-fade-in-up stagger-3">
-          {parent.prepayeAnnuel ? (
-            <StatTile label="Facturation" valeur="Prépayée ✓" sousTexte="Entente annuelle" />
+          {enfantsAvecEntente.length > 0 ? (
+            <StatTile
+              label="Repas restants"
+              valeur={`${enfantsAvecEntente.reduce((s, e) => s + (e.entente?.repasRestants ?? 0), 0)} / ${enfantsAvecEntente.reduce((s, e) => s + (e.entente?.repasInclus ?? 0), 0)}`}
+              sousTexte={
+                enfantsAvecEntente.length > 1
+                  ? `Sur l'entente annuelle de ${enfantsAvecEntente.length} enfants`
+                  : `${enfantsAvecEntente[0].entente?.soldeDollars.toFixed(2)}$ sur l'entente annuelle`
+              }
+            />
+          ) : parent.soldePrepayeActif && parent.soldePrepaye ? (
+            <StatTile
+              label="Solde prépayé"
+              valeur={`${parent.soldePrepaye.disponible.toFixed(2)}$`}
+              sousTexte={`${parent.soldePrepaye.totalDepose.toFixed(2)}$ déposé au total`}
+            />
           ) : (
             <StatTile label="Non payé" valeur={`${nonPaye.toFixed(2)}$`} />
           )}
         </div>
       </div>
+
+      {enfantsAvecEntente.map((e) => (
+        <AlerteVersement key={e.id} versement2={e.entente?.versement2 ?? null} enfantNom={`${e.prenom} ${e.nomDeFamille}`} />
+      ))}
 
       {parent.enfants.length === 0 && (
         <div className="animate-fade-in-up bg-white rounded-2xl shadow-card p-6 text-center space-y-3">
@@ -77,7 +101,7 @@ export default function TableauDeBordPage() {
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-sm font-semibold text-pomme-ink/70 uppercase tracking-wide">Activité récente</h2>
           {commandes.length > 0 && (
-            <Link href="/parent/compte/paiement" className="text-xs font-semibold text-pomme-apple-deep hover:underline">
+            <Link href="/parent/compte/paiement" className="press inline-flex items-center min-h-[44px] -ml-1 px-1 text-sm font-semibold text-pomme-apple-deep hover:underline">
               Tout voir →
             </Link>
           )}
@@ -91,7 +115,7 @@ export default function TableauDeBordPage() {
             >
               <div className="min-w-0">
                 <div className="text-sm font-semibold text-pomme-ink truncate">
-                  {c.enfant.prenom} {c.enfant.nomDeFamille} — {c.menu.thematique || 'Menu'}
+                  {c.enfant.prenom} {c.enfant.nomDeFamille} — {c.menu.thematiqueRef?.nom || 'Menu'}
                 </div>
                 <div className="text-xs font-medium text-pomme-ink/60 truncate">
                   {c.menu.institution.nom} · {new Date(c.createdAt).toLocaleDateString('fr-CA')} · {LABEL_PAIEMENT[c.modePaiement]}

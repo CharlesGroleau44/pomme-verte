@@ -24,6 +24,7 @@ export default function FicheInstitutionPage({ params }: { params: { id: string 
     setForm({
       nom: data.nom,
       logoUrl: data.logoUrl,
+      prospectusUrl: data.prospectusUrl ?? null,
       adresse: data.adresse ?? '',
       ville: data.ville ?? '',
       province: data.province ?? 'QC',
@@ -35,8 +36,12 @@ export default function FicheInstitutionPage({ params }: { params: { id: string 
       telephoneContact: data.telephoneContact ?? '',
       courrielContact: data.courrielContact ?? '',
       notes: data.notes ?? '',
+      prixRepasDepannage: data.prixRepasDepannage != null ? String(data.prixRepasDepannage) : '',
+      politiques: data.politiques ?? '',
       offreFondation: data.offreFondation,
       offreFormatPetit: data.offreFormatPetit,
+      niveauxFormatPetit: data.niveauxFormatPetit ?? [],
+      calendrierScolaireId: data.calendrierScolaireId ?? null,
     });
   };
 

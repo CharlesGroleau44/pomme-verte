@@ -6,7 +6,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { genererJetonReinitialisation } from '@/lib/parent-auth';
-import { envoyerCourriel } from '@/lib/courriel';
+import { envoyerReinitialisation } from '@/lib/courriels-envois';
 
 export const dynamic = 'force-dynamic';
 
@@ -25,11 +25,7 @@ export async function POST(req: NextRequest) {
 
     const origine = process.env.SITE_URL ?? new URL(req.url).origin;
     const lien = `${origine}/parent/reinitialiser?jeton=${resetToken}`;
-    await envoyerCourriel({
-      a: courriel,
-      sujet: 'Réinitialisation de votre mot de passe — Traiteur La Pomme Verte',
-      texte: `Bonjour ${parent.nom},\n\nPour choisir un nouveau mot de passe, cliquez sur ce lien (valide 1 heure) :\n${lien}\n\nSi vous n'avez pas demandé cette réinitialisation, ignorez ce courriel.`,
-    });
+    await envoyerReinitialisation({ a: courriel, nom: parent.nom, lien });
   }
 
   return NextResponse.json(MESSAGE_GENERIQUE);

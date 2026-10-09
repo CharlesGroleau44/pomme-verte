@@ -2,25 +2,55 @@
 // app/admin/Sidebar.tsx
 // Navigation principale — sidebar fixe en bureau/tablette, remplacée par
 // NavMobile.tsx (barre d'onglets en bas) sous md.
+import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
-import { IconeInstitution, IconeRepas, IconeMenu, IconeCommande, IconeParent, IconeDeconnexion } from './Icones';
+import {
+  IconeInstitution,
+  IconeRepas,
+  IconeMenu,
+  IconeThematique,
+  IconeCommande,
+  IconeParent,
+  IconeCalendrier,
+  IconeDemande,
+  IconeRegistre,
+  IconeRapport,
+  IconeUtilisateurs,
+  IconeDeconnexion,
+} from './Icones';
 
 const SECTIONS = [
+  { href: '/admin/dashboard', label: 'Tableau de bord', Icone: IconeRapport },
   { href: '/admin/institutions', label: 'Institutions', Icone: IconeInstitution },
   { href: '/admin/repas', label: 'Repas', Icone: IconeRepas },
+  { href: '/admin/thematiques', label: 'Thématiques', Icone: IconeThematique },
   { href: '/admin/menus', label: 'Menus', Icone: IconeMenu },
+  { href: '/admin/calendriers', label: 'Calendriers', Icone: IconeCalendrier },
   { href: '/admin/commandes', label: 'Commandes', Icone: IconeCommande },
   { href: '/admin/parents', label: 'Parents', Icone: IconeParent },
+  { href: '/admin/registre', label: 'Registre', Icone: IconeRegistre },
+  { href: '/admin/demandes', label: 'Demandes', Icone: IconeDemande },
 ];
+
+type Moi = { nom: string; role: 'ADMIN' | 'GESTIONNAIRE' };
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const [moi, setMoi] = useState<Moi | null>(null);
+
+  useEffect(() => {
+    fetch('/api/admin/moi').then((r) => (r.ok ? r.json() : null)).then(setMoi);
+  }, []);
 
   const deconnecter = async () => {
     await fetch('/api/logout', { method: 'POST' });
     window.location.href = '/login';
   };
+
+  const sections = moi?.role === 'ADMIN'
+    ? [...SECTIONS, { href: '/admin/utilisateurs', label: 'Utilisateurs', Icone: IconeUtilisateurs }]
+    : SECTIONS;
 
   return (
     <aside className="hidden md:flex md:flex-col md:w-60 md:shrink-0 md:h-screen md:sticky md:top-0 relative overflow-hidden bg-gradient-to-b from-pomme-leaf-deep to-pomme-leaf text-white">
@@ -34,7 +64,7 @@ export default function Sidebar() {
       </div>
 
       <nav className="relative flex-1 px-3 space-y-1">
-        {SECTIONS.map(({ href, label, Icone }) => {
+        {sections.map(({ href, label, Icone }) => {
           const actif = pathname.startsWith(href);
           return (
             <Link
@@ -53,7 +83,20 @@ export default function Sidebar() {
         })}
       </nav>
 
-      <div className="relative px-3 pb-6 pt-2 border-t border-white/10">
+      <div className="relative px-3 pb-6 pt-2 border-t border-white/10 space-y-2">
+        <a
+          href="/api/guide-commande/pdf"
+          target="_blank"
+          rel="noreferrer"
+          className="press flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-pomme-apple-light/90 hover:bg-white/10 hover:text-white transition-colors"
+        >
+          Guide de commande (PDF)
+        </a>
+        {moi && (
+          <div className="px-3 text-xs text-pomme-apple-light/70 truncate">
+            Connecté comme <span className="font-semibold text-pomme-apple-light">{moi.nom}</span>
+          </div>
+        )}
         <button
           onClick={deconnecter}
           className="press flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-pomme-apple-light/90 hover:bg-white/10 hover:text-white transition-colors w-full"

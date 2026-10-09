@@ -3,8 +3,9 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { CHAMP } from '@/lib/ui';
 
-const INPUT = 'w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow';
+const INPUT = CHAMP;
 
 export default function ConnexionParentPage() {
   return (
@@ -60,7 +61,7 @@ function FormulaireConnexion() {
             Mot de passe
             <input type="password" value={motDePasse} onChange={(e) => setMotDePasse(e.target.value)} className={INPUT} />
           </label>
-          <Link href="/parent/mot-de-passe-oublie" className="block text-xs font-medium text-pomme-apple-deep hover:underline text-right">
+          <Link href="/parent/mot-de-passe-oublie" className="press inline-flex items-center min-h-[44px] ml-auto px-1 text-sm font-medium text-pomme-apple-deep hover:underline">
             Mot de passe oublié ?
           </Link>
         </div>
@@ -77,7 +78,7 @@ function FormulaireConnexion() {
 
         <p className="text-sm font-medium text-pomme-ink/65 text-center">
           Pas encore de compte ?{' '}
-          <Link href={`/parent/inscription?suite=${encodeURIComponent(suite)}`} className="text-pomme-apple-deep hover:underline">
+          <Link href={`/parent/inscription?suite=${encodeURIComponent(suite)}`} className="press inline-flex items-center min-h-[44px] -my-3 font-semibold text-pomme-apple-deep hover:underline">
             Créer un compte
           </Link>
         </p>

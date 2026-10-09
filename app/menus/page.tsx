@@ -5,7 +5,8 @@
 // la nouvelle plateforme.
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
-import { estActivementPublie } from '@/lib/menu-logic';
+import { estMenuVisible } from '@/lib/menu-logic';
+import { photo } from '@/lib/images';
 
 export const dynamic = 'force-dynamic';
 
@@ -20,7 +21,7 @@ export default async function ListeInstitutionsPage() {
   // d'abord (la grande majorité n'ont qu'un seul menu actif à la fois).
   const menuActifParInstitution = new Map<string, (typeof tousLesMenusPublies)[number]>();
   for (const m of tousLesMenusPublies) {
-    if (estActivementPublie(m) && !menuActifParInstitution.has(m.institutionId)) {
+    if (estMenuVisible(m) && !menuActifParInstitution.has(m.institutionId)) {
       menuActifParInstitution.set(m.institutionId, m);
     }
   }
@@ -30,6 +31,14 @@ export default async function ListeInstitutionsPage() {
       <div className="text-center space-y-2 animate-fade-in-up">
         <h1 className="text-4xl font-display font-semibold text-pomme-leaf-deep">Votre institution</h1>
         <p className="text-pomme-ink/70 font-medium">Choisissez votre école, CPE ou RPA pour consulter son menu.</p>
+        <a
+          href="/api/guide-commande/pdf"
+          target="_blank"
+          rel="noreferrer"
+          className="press inline-flex items-center gap-1.5 text-sm font-semibold text-pomme-apple-deep hover:underline"
+        >
+          Comment commander en ligne — guide en 5 étapes (PDF) →
+        </a>
       </div>
 
       <div className="grid sm:grid-cols-2 gap-5">
@@ -42,7 +51,7 @@ export default async function ListeInstitutionsPage() {
             >
               <div className="h-20 flex items-center justify-center">
                 {i.logoUrl ? (
-                  <img src={i.logoUrl} alt={i.nom} className="max-h-20 max-w-[220px] object-contain" />
+                  <img {...photo(i.logoUrl, 320)} loading="lazy" decoding="async" alt={i.nom} className="max-h-20 max-w-[220px] object-contain" />
                 ) : (
                   <div className="h-16 w-16 rounded-full bg-gradient-to-br from-pomme-apple-light to-pomme-apple-mid flex items-center justify-center text-2xl font-display font-semibold text-white shadow-soft">
                     {i.nom.charAt(0)}
@@ -72,6 +81,35 @@ export default async function ListeInstitutionsPage() {
                   >
                     Téléchargez le menu
                   </a>
+                )}
+
+                {/* Invitation au prépaiement — demandée par Christine
+                    (courriel du 11 août 2026) pour que le parent découvre le
+                    solde prépayé dès la liste des écoles, sans avoir à entrer
+                    dans un menu d'abord. Pointe l'ancre #prepaye du formulaire
+                    de commande. L'entente annuelle a été retirée de l'offre
+                    (Christine, 9 octobre 2026) — seul le solde reste proposé
+                    ici ; les ententes déjà actives ne sont pas touchées. */}
+                {menuActif && (
+                  <Link
+                    href={`/menus/${i.id}/${menuActif.id}#prepaye`}
+                    className="press mt-1 rounded-xl bg-gradient-to-br from-pomme-blush to-pomme-blush-deep px-4 py-3 text-left shadow-soft hover:shadow-lifted hover:-translate-y-0.5 transition-all"
+                  >
+                    <span className="flex items-center gap-2.5">
+                      <span className="text-xl shrink-0">🍏</span>
+                      <span className="min-w-0">
+                        <span className="block text-sm font-extrabold text-white leading-snug">
+                          Simplifiez vos paiements
+                        </span>
+                        <span className="block text-xs font-medium text-white/90 mt-0.5">
+                          Déposez un solde prépayé à votre rythme
+                        </span>
+                        <span className="block text-xs font-bold text-white mt-1.5">
+                          En savoir plus →
+                        </span>
+                      </span>
+                    </span>
+                  </Link>
                 )}
               </div>
             </div>

@@ -5,6 +5,8 @@ import ChampPhoto from '../ChampPhoto';
 import StatTile from '../dashboard/StatTile';
 import TendanceHebdo from '../dashboard/TendanceHebdo';
 import EntreesRecentes from '../dashboard/EntreesRecentes';
+import { CHAMP, CHAMP_NU } from '@/lib/ui';
+import { photo } from '@/lib/images';
 
 type Repas = {
   id: string;
@@ -16,6 +18,7 @@ type Repas = {
   prixPetit: string;
   prixRegulier: string;
   prixDeuxiemeService: string;
+  vegetarien: boolean;
   institutions: { id: string }[];
   createdAt: string;
 };
@@ -30,13 +33,16 @@ function ApercuRepas({ repas, institutions, onFermer }: { repas: Repas; institut
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-pomme-ink/50" onClick={onFermer}>
       <div className="bg-white rounded-2xl shadow-lifted max-w-lg w-full max-h-[90vh] overflow-y-auto" onClick={(e) => e.stopPropagation()}>
         {photos.length > 0 ? (
-          <img src={photos[0]} alt={repas.nom} className="w-full h-64 object-cover rounded-t-2xl" />
+          <img {...photo(photos[0], 640)} alt={repas.nom} className="w-full h-64 object-cover rounded-t-2xl" />
         ) : (
           <div className="w-full h-64 bg-pomme-soft rounded-t-2xl" />
         )}
         <div className="p-6 space-y-4">
           <div className="flex items-start justify-between gap-3">
-            <h2 className="text-xl font-extrabold text-pomme-leaf-deep">{repas.nom}</h2>
+            <h2 className="text-xl font-extrabold text-pomme-leaf-deep">
+              {repas.nom}
+              {repas.vegetarien && <span className="ml-2 align-middle text-xs font-bold text-pomme-leaf-deep bg-pomme-soft rounded-full px-2 py-1">Végétarien</span>}
+            </h2>
             <button onClick={onFermer} className="text-pomme-ink/50 hover:text-pomme-ink text-xl leading-none shrink-0">✕</button>
           </div>
 
@@ -60,7 +66,7 @@ function ApercuRepas({ repas, institutions, onFermer }: { repas: Repas; institut
               <div className="text-base font-bold text-pomme-leaf-deep">{repas.prixRegulier}$</div>
             </div>
             <div className="bg-pomme-soft rounded-xl p-3 text-center">
-              <div className="text-xs font-medium text-pomme-ink/65">+ 2ᵉ service</div>
+              <div className="text-xs font-medium text-pomme-ink/65">Portion +</div>
               <div className="text-base font-bold text-pomme-leaf-deep">{repas.prixDeuxiemeService}$</div>
             </div>
           </div>
@@ -87,6 +93,7 @@ const FORM_VIDE = {
   prixPetit: '6.50',
   prixRegulier: '7.00',
   prixDeuxiemeService: '10.00',
+  vegetarien: false,
   institutionIds: [] as string[],
 };
 
@@ -128,6 +135,7 @@ export default function RepasPage() {
       prixPetit: r.prixPetit,
       prixRegulier: r.prixRegulier,
       prixDeuxiemeService: r.prixDeuxiemeService,
+      vegetarien: r.vegetarien,
       institutionIds: r.institutions.map((i) => i.id),
     });
     setShowForm(true);
@@ -153,6 +161,7 @@ export default function RepasPage() {
       prixPetit: parseFloat(form.prixPetit),
       prixRegulier: parseFloat(form.prixRegulier),
       prixDeuxiemeService: parseFloat(form.prixDeuxiemeService),
+      vegetarien: form.vegetarien,
       institutionIds: form.institutionIds,
     };
 
@@ -235,13 +244,13 @@ export default function RepasPage() {
             placeholder="Nom du repas"
             value={form.nom}
             onChange={(e) => setForm({ ...form, nom: e.target.value })}
-            className="w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep"
+            className={CHAMP_NU + " w-full"}
           />
           <input
             placeholder="Description"
             value={form.description}
             onChange={(e) => setForm({ ...form, description: e.target.value })}
-            className="w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep"
+            className={CHAMP_NU + " w-full"}
           />
 
           <div>
@@ -258,18 +267,28 @@ export default function RepasPage() {
             <div className="grid grid-cols-3 gap-2">
               <label className="block text-xs font-medium text-pomme-ink/70">
                 Petit repas
-                <input value={form.prixPetit} onChange={(e) => setForm({ ...form, prixPetit: e.target.value })} className="w-full border border-pomme-line/50 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40" />
+                <input value={form.prixPetit} onChange={(e) => setForm({ ...form, prixPetit: e.target.value })} className={CHAMP} />
               </label>
               <label className="block text-xs font-medium text-pomme-ink/70">
                 Repas régulier
-                <input value={form.prixRegulier} onChange={(e) => setForm({ ...form, prixRegulier: e.target.value })} className="w-full border border-pomme-line/50 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40" />
+                <input value={form.prixRegulier} onChange={(e) => setForm({ ...form, prixRegulier: e.target.value })} className={CHAMP} />
               </label>
               <label className="block text-xs font-medium text-pomme-ink/70">
-                Repas + 2ᵉ service
-                <input value={form.prixDeuxiemeService} onChange={(e) => setForm({ ...form, prixDeuxiemeService: e.target.value })} className="w-full border border-pomme-line/50 rounded-xl px-3 py-2 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40" />
+                Portion +
+                <input value={form.prixDeuxiemeService} onChange={(e) => setForm({ ...form, prixDeuxiemeService: e.target.value })} className={CHAMP} />
               </label>
             </div>
           </div>
+
+          <label className="flex items-center gap-2.5 min-h-[44px]">
+            <input
+              type="checkbox"
+              checked={form.vegetarien}
+              onChange={(e) => setForm({ ...form, vegetarien: e.target.checked })}
+              className="h-5 w-5 accent-pomme-apple-deep"
+            />
+            <span className="text-sm font-semibold text-pomme-ink/85">Repas végétarien</span>
+          </label>
 
           <div>
             <span className="block text-sm font-semibold text-pomme-ink/85 mb-1">Institutions</span>
@@ -280,7 +299,7 @@ export default function RepasPage() {
                   key={i.id}
                   type="button"
                   onClick={() => toggleInstitution(i.id)}
-                  className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                  className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
                     form.institutionIds.includes(i.id)
                       ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
                       : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
@@ -305,15 +324,18 @@ export default function RepasPage() {
             <div key={r.id} className="flex items-center justify-between px-5 py-3.5 gap-3 transition-colors duration-200 hover:bg-pomme-soft/50">
               <div className="flex items-center gap-3 min-w-0">
                 {r.photoUrl ? (
-                  <img src={r.photoUrl} alt="" className="w-12 h-12 object-cover rounded-xl border border-pomme-soft shrink-0 shadow-soft" />
+                  <img {...photo(r.photoUrl, 160)} loading="lazy" decoding="async" alt="" className="w-12 h-12 object-cover rounded-xl border border-pomme-soft shrink-0 shadow-soft" />
                 ) : (
                   <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-pomme-apple-light to-pomme-apple-mid shrink-0" />
                 )}
                 <div className="min-w-0">
-                  <div className="text-sm font-semibold truncate">{r.nom}</div>
+                  <div className="text-sm font-semibold truncate">
+                    {r.nom}
+                    {r.vegetarien && <span className="ml-2 text-xs font-bold text-pomme-leaf-deep">Végétarien</span>}
+                  </div>
                   <div className="text-xs font-medium text-pomme-ink/70 truncate">{r.description}</div>
                   <div className="text-xs font-medium text-pomme-ink/60">
-                    Petit repas {r.prixPetit}$ · Repas régulier {r.prixRegulier}$ · Repas + 2ᵉ service {r.prixDeuxiemeService}$
+                    Petit repas {r.prixPetit}$ · Repas régulier {r.prixRegulier}$ · Portion + {r.prixDeuxiemeService}$
                   </div>
                   {r.institutions.length > 0 && (
                     <div className="text-xs text-pomme-apple-deep font-medium mt-0.5">{r.institutions.length} institution(s) seulement</div>

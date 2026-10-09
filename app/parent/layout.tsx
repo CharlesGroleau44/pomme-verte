@@ -20,7 +20,7 @@ export default function ParentLayout({ children }: { children: React.ReactNode }
           </Link>
           <Link
             href="/menus"
-            className="press bg-white/10 hover:bg-white/20 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors shrink-0 backdrop-blur"
+            className="press inline-flex items-center min-h-[44px] bg-white/10 hover:bg-white/20 text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors shrink-0 backdrop-blur"
           >
             ← Les menus
           </Link>

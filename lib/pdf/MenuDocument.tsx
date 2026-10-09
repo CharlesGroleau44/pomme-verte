@@ -27,43 +27,50 @@ const styles = StyleSheet.create({
     fontSize: 9,
     color: COULEURS.ink,
     backgroundColor: '#FFFFFF',
-    padding: 28,
+    padding: 22,
   },
   entete: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderBottom: `2 solid ${COULEURS.appleDeep}`,
-    paddingBottom: 12,
-    marginBottom: 14,
+    paddingBottom: 8,
+    marginBottom: 9,
   },
-  logo: { width: 40, height: 40, borderRadius: 20 },
+  logo: { width: 34, height: 34, borderRadius: 17 },
   enteteTexte: { marginLeft: 10 },
+  // « Traiteur La Pomme Verte — Menu scolaire » sur une seule ligne plutôt
+  // que deux (marque + sous-marque empilées) — gagne une ligne pleine dans
+  // l'en-tête, demandé par Charles pour condenser le PDF à 2 pages au lieu
+  // de 3 (le débordement typique n'est que de 2-3 lignes sur la 3e page).
   marque: { fontSize: 12, fontWeight: 800, color: COULEURS.leafDeep },
-  sousMarque: { fontSize: 7.5, color: COULEURS.inkMuted, marginTop: 1 },
-  institutionLogo: { width: 36, height: 36, objectFit: 'contain' },
-  titreBloc: { marginBottom: 12 },
+  sousMarque: { fontSize: 8, fontWeight: 400, color: COULEURS.inkMuted },
+  institutionLogo: { width: 32, height: 32, objectFit: 'contain' },
+  titreBloc: { marginBottom: 8 },
   titre: { fontSize: 17, fontWeight: 800, color: COULEURS.leafDeep },
   institutionNom: { fontSize: 11, fontWeight: 700, color: COULEURS.appleDeep, marginTop: 2 },
+  // Période et date limite regroupées sur une seule ligne (même motif que
+  // l'en-tête) — l'une en gris, l'autre en gras/couleur d'alerte via un
+  // Text imbriqué, mais un seul bloc de texte donc une seule ligne.
   periode: { fontSize: 8.5, color: COULEURS.inkMuted, marginTop: 3 },
-  dateLimite: { fontSize: 8.5, fontWeight: 700, color: COULEURS.warn, marginTop: 2 },
+  dateLimiteInline: { fontWeight: 700, color: COULEURS.warn },
 
-  journee: { marginBottom: 7, padding: 8, backgroundColor: COULEURS.soft, borderRadius: 7 },
-  jourLabel: { fontSize: 9, fontWeight: 800, color: COULEURS.ink, marginBottom: 4 },
-  selectionRow: { flexDirection: 'row', marginBottom: 4 },
+  journee: { marginBottom: 4, padding: 6, backgroundColor: COULEURS.soft, borderRadius: 7 },
+  jourLabel: { fontSize: 9, fontWeight: 800, color: COULEURS.ink, marginBottom: 2.5 },
+  selectionRow: { flexDirection: 'row', marginBottom: 2.5 },
   selectionRowLast: { flexDirection: 'row' },
-  photo: { width: 28, height: 28, borderRadius: 5, marginRight: 7, objectFit: 'cover' },
-  photoVide: { width: 28, height: 28, borderRadius: 5, marginRight: 7, backgroundColor: COULEURS.line },
+  photo: { width: 25, height: 25, borderRadius: 5, marginRight: 7, objectFit: 'cover' },
+  photoVide: { width: 25, height: 25, borderRadius: 5, marginRight: 7, backgroundColor: COULEURS.line },
   selectionTexte: { flex: 1 },
   repasNom: { fontSize: 8.5, fontWeight: 700 },
-  repasDescription: { fontSize: 7.5, color: COULEURS.inkMuted, marginTop: 1 },
-  prix: { fontSize: 7.5, color: COULEURS.inkMuted, marginTop: 1.5 },
+  repasDescription: { fontSize: 7.5, color: COULEURS.inkMuted, marginTop: 0.5 },
+  prix: { fontSize: 7.5, color: COULEURS.inkMuted, marginTop: 1 },
 
   decoupe: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
-    marginBottom: 12,
+    marginTop: 4,
+    marginBottom: 8,
   },
   decoupeTrait: { flex: 1, borderTop: `1 dashed ${COULEURS.lineForte}` },
   decoupeTexte: {
@@ -78,9 +85,9 @@ const styles = StyleSheet.create({
   // plusieurs pages (menus longs) et une bordure qui se referme au
   // milieu d'un saut de page a l'air cassée.
   coupon: {},
-  couponTitre: { fontSize: 10, fontWeight: 800, color: COULEURS.leafDeep, marginBottom: 8 },
+  couponTitre: { fontSize: 10, fontWeight: 800, color: COULEURS.leafDeep, marginBottom: 6 },
 
-  semaine: { flexDirection: 'row', marginBottom: 8 },
+  semaine: { flexDirection: 'row', marginBottom: 6 },
   jourColonne: { flex: 1, marginRight: 6 },
   jourColonneLast: { flex: 1 },
   jourColHeader: {
@@ -89,9 +96,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     backgroundColor: COULEURS.appleDeep,
     textAlign: 'center',
-    paddingVertical: 3,
+    paddingVertical: 2.5,
     borderRadius: 3,
-    marginBottom: 3,
+    marginBottom: 2.5,
   },
   choixLigne: { flexDirection: 'row', alignItems: 'center', marginBottom: 2 },
   radio: { width: 6, height: 6, borderRadius: 3, borderWidth: 0.75, borderColor: COULEURS.ink, marginRight: 4 },
@@ -102,21 +109,24 @@ const styles = StyleSheet.create({
     fontSize: 8.5,
     fontWeight: 800,
     color: COULEURS.leafDeep,
-    marginTop: 10,
-    marginBottom: 5,
+    marginTop: 6,
+    marginBottom: 3,
     borderTop: `1 solid ${COULEURS.line}`,
-    paddingTop: 8,
+    paddingTop: 5,
   },
-  ligneChamps: { flexDirection: 'row', marginBottom: 7 },
+  ligneChamps: { flexDirection: 'row', marginBottom: 4 },
   champ: { flex: 1, marginRight: 14 },
   champLast: { flex: 1 },
   champLabel: { fontSize: 7.5, color: COULEURS.inkMuted, marginBottom: 2 },
-  champTrait: { borderBottom: `1 solid ${COULEURS.ink}`, height: 12 },
+  champTrait: { borderBottom: `1 solid ${COULEURS.ink}`, height: 11 },
 
-  groupeChoix: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 2 },
-  groupeChoixItem: { flexDirection: 'row', alignItems: 'center', marginRight: 12, marginBottom: 3 },
+  groupeChoix: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 1 },
+  groupeChoixItem: { flexDirection: 'row', alignItems: 'center', marginRight: 12, marginBottom: 2.5 },
 
-  piedDePage: { marginTop: 12, paddingTop: 10, borderTop: `1 solid ${COULEURS.line}` },
+  politiquesBloc: { marginTop: 7, paddingTop: 6, borderTop: `1 solid ${COULEURS.line}` },
+  politiquesTitre: { fontSize: 8.5, fontWeight: 800, color: COULEURS.leafDeep, marginBottom: 3 },
+  politiquesLigne: { fontSize: 7.5, color: COULEURS.inkMuted, marginBottom: 1, lineHeight: 1.2 },
+  piedDePage: { marginTop: 7, paddingTop: 6, borderTop: `1 solid ${COULEURS.line}` },
   piedTitre: { fontSize: 8.5, fontWeight: 800, color: COULEURS.leafDeep, marginBottom: 3 },
   piedLigne: { fontSize: 7.5, color: COULEURS.inkMuted, marginBottom: 1.5 },
   lienLigne: { fontSize: 7.5, color: COULEURS.appleDeep, fontWeight: 700, marginTop: 4 },
@@ -147,7 +157,13 @@ export type MenuDocumentProps = {
   periodeFin: Date;
   dateLimiteCommande: Date;
   urlEnLigne: string;
-  institution: { nom: string; telephone: string | null; courriel: string | null; logo: PhotoResolue; offreFondation: boolean; offreFormatPetit: boolean };
+  institution: {
+    nom: string; telephone: string | null; courriel: string | null; logo: PhotoResolue;
+    offreFondation: boolean; offreFormatPetit: boolean;
+    // Bloc « politiques » — ce que le prospectus papier portait (repas
+    // dépannage, crédits, chèques). Voir Institution dans schema.prisma.
+    prixRepasDepannage: string | null; politiques: string | null;
+  };
   logoTraiteur: PhotoResolue;
   journees: JourneePdf[];
 };
@@ -170,7 +186,7 @@ function regrouperParSemaine(journees: JourneePdf[]): JourneePdf[][] {
 
 const NIVEAUX = ['Préscolaire', '1', '2', '3', '4', '5', '6', 'Adulte'];
 const ALLERGIES = ['Gluten', 'Lactose', 'Végétarien', 'Autre'];
-const MODES_PAIEMENT_BASE = ['Argent comptant', 'Virement Interac', 'Chèque #______', 'Prépayé'];
+const MODES_PAIEMENT_BASE = ['Argent comptant', 'Virement Interac', 'Chèque #______', 'Entente annuelle'];
 
 export default function MenuDocument({
   thematique,
@@ -195,8 +211,7 @@ export default function MenuDocument({
           <View style={{ flexDirection: 'row', alignItems: 'center' }}>
             {logoTraiteur && <Image src={logoTraiteur} style={styles.logo} />}
             <View style={styles.enteteTexte}>
-              <Text style={styles.marque}>Traiteur La Pomme Verte</Text>
-              <Text style={styles.sousMarque}>Menu scolaire</Text>
+              <Text style={styles.marque}>Traiteur La Pomme Verte <Text style={styles.sousMarque}>— Menu scolaire</Text></Text>
             </View>
           </View>
           {institution.logo && <Image src={institution.logo} style={styles.institutionLogo} />}
@@ -205,8 +220,9 @@ export default function MenuDocument({
         <View style={styles.titreBloc}>
           <Text style={styles.titre}>{thematique || 'Menu'}</Text>
           <Text style={styles.institutionNom}>{institution.nom}</Text>
-          <Text style={styles.periode}>Du {fmtDate(periodeDebut)} au {fmtDate(periodeFin)}</Text>
-          <Text style={styles.dateLimite}>Date limite de commande : {fmtDate(dateLimiteCommande)}</Text>
+          <Text style={styles.periode}>
+            Du {fmtDate(periodeDebut)} au {fmtDate(periodeFin)}  ·  <Text style={styles.dateLimiteInline}>Date limite de commande : {fmtDate(dateLimiteCommande)}</Text>
+          </Text>
         </View>
 
         {journees.map((j) => (
@@ -220,7 +236,7 @@ export default function MenuDocument({
                   {s.description && <Text style={styles.repasDescription}>{s.description}</Text>}
                   <Text style={styles.prix}>
                     {institution.offreFormatPetit ? `Petit repas ${s.prixPetit}$ · ` : ''}
-                    Repas régulier {s.prixRegulier}$ · Repas + 2e service {s.prixDeuxiemeService}$
+                    Repas régulier {s.prixRegulier}$ · Portion + {s.prixDeuxiemeService}$
                   </Text>
                 </View>
               </View>
@@ -246,7 +262,7 @@ export default function MenuDocument({
                     <View style={styles.choixLigne}><View style={styles.radio} /><Text style={styles.choixTexte}>Petit repas</Text></View>
                   )}
                   <View style={styles.choixLigne}><View style={styles.radio} /><Text style={styles.choixTexte}>Repas régulier</Text></View>
-                  <View style={styles.choixLigne}><View style={styles.radio} /><Text style={styles.choixTexte}>Repas + 2e serv.</Text></View>
+                  <View style={styles.choixLigne}><View style={styles.radio} /><Text style={styles.choixTexte}>Portion +</Text></View>
                   {j.selections.map((s) => (
                     <View key={s.id} style={styles.choixLigne}>
                       <View style={styles.case} />
@@ -296,6 +312,25 @@ export default function MenuDocument({
             <View style={styles.champLast}><Text style={styles.champLabel}>Courriel</Text><View style={styles.champTrait} /></View>
           </View>
         </View>
+
+        {(institution.prixRepasDepannage || institution.politiques) && (
+          <View style={styles.politiquesBloc} wrap={false}>
+            <Text style={styles.politiquesTitre}>À savoir</Text>
+            {institution.prixRepasDepannage && (
+              <Text style={styles.politiquesLigne}>
+                {/* Virgule décimale et espace avant le $ — pour s'accorder avec
+                    le reste du bloc (« 25,00 $ de frais »), repris du prospectus.
+                    Formulation large, voulue par Christine (courriel du 10 août
+                    2026) : « pas juste un repas oublié, nous sommes là pour tout
+                    oubli ou besoin, comme au dépanneur ». */}
+                Repas dépannage : {institution.prixRepasDepannage.replace('.', ',')} $ — offert si l&apos;enfant oublie son dîner ou sa boîte à lunch, si le menu n&apos;a pas été remis à temps, ou pour tout autre besoin. Repas au choix du chef.
+              </Text>
+            )}
+            {institution.politiques?.split('\n').filter((l) => l.trim()).map((ligne, i) => (
+              <Text key={i} style={styles.politiquesLigne}>{ligne.trim()}</Text>
+            ))}
+          </View>
+        )}
 
         <View style={styles.piedDePage}>
           <Text style={styles.piedTitre}>Pour commander</Text>

@@ -23,7 +23,7 @@ export async function GET() {
     include: {
       compteParent: true,
       enfant: { include: { institution: true } },
-      menu: { include: { institution: true } },
+      menu: { include: { institution: true, thematiqueRef: true } },
       lignes: {
         include: { journee: true, selection: { include: { repas: true } } },
         orderBy: { journee: { date: 'asc' } },
@@ -36,7 +36,10 @@ export async function GET() {
     ...c,
     lignes: c.lignes.map((l) => {
       const nom = l.selection.nomOverride ?? l.selection.repas.nom;
-      const prix = (l.selection[CHAMP_PRIX_OVERRIDE[l.taille]] ?? l.selection.repas[CHAMP_PRIX[l.taille]]).toString();
+      // Commande tardive (dépannage) : prixOverride fige le tarif au moment
+      // de la commande, indépendant du repas/de la taille — voir
+      // prisma/schema.prisma::LigneCommande et lib/menu-logic.ts::prixLigne.
+      const prix = (l.prixOverride ?? l.selection[CHAMP_PRIX_OVERRIDE[l.taille]] ?? l.selection.repas[CHAMP_PRIX[l.taille]]).toString();
       return { ...l, nomResolu: nom, prixResolu: prix };
     }),
   }));

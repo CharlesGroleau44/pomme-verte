@@ -3,6 +3,7 @@
 // les parents voient. Volontairement plus sobre que /admin — pas de
 // sidebar, juste un en-tête de marque et le contenu.
 import Link from 'next/link';
+import LienConnexion from './LienConnexion';
 
 export default function MenusPubliqueLayout({ children }: { children: React.ReactNode }) {
   return (
@@ -17,14 +18,12 @@ export default function MenusPubliqueLayout({ children }: { children: React.Reac
               alt="Traiteur La Pomme Verte"
               className="h-11 w-11 rounded-full object-cover shrink-0 transition-transform duration-300 group-hover:scale-105"
             />
-            <span className="text-pomme-leaf-deep font-display font-semibold text-sm sm:text-lg truncate">Traiteur La Pomme Verte</span>
+            {/* Sur un écran de 375 px, « Traiteur La Pomme Verte » sur une
+                seule ligne se faisait couper en « Traiteur La Pomme … ».
+                Deux lignes serrées plutôt qu'un nom tronqué. */}
+            <span className="text-pomme-leaf-deep font-display font-semibold text-sm sm:text-lg leading-tight">Traiteur La Pomme Verte</span>
           </Link>
-          <Link
-            href="/parent/connexion"
-            className="press bg-pomme-apple-deep hover:bg-pomme-leaf text-white rounded-xl px-4 py-2 text-sm font-semibold transition-colors shrink-0"
-          >
-            Se connecter
-          </Link>
+          <LienConnexion />
         </div>
       </header>
       <main className="max-w-3xl mx-auto px-5 py-8">{children}</main>

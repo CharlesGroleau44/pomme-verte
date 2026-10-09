@@ -30,6 +30,7 @@ export async function POST(req: NextRequest) {
       prixPetit: body.prixPetit ?? 6.5,
       prixRegulier: body.prixRegulier ?? 7.0,
       prixDeuxiemeService: body.prixDeuxiemeService ?? 10.0,
+      vegetarien: !!body.vegetarien,
       institutions: Array.isArray(body.institutionIds)
         ? { connect: body.institutionIds.map((id: string) => ({ id })) }
         : undefined,

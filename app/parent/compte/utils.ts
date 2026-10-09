@@ -3,14 +3,12 @@
 // /api/commandes côté admin) retourne les champs bruts de LigneCommande,
 // pas de nomResolu/prixResolu déjà calculés. On réutilise resoudreSelection
 // (la même logique que le montage de menu) plutôt que de la dupliquer.
-import { resoudreSelection } from '@/lib/menu-logic';
+import { resoudreSelection, prixLigne } from '@/lib/menu-logic';
 import type { Commande, Ligne } from './ContexteParent';
 
 export function resoudreLigne(ligne: Ligne) {
   const r = resoudreSelection(ligne.selection);
-  const prix =
-    ligne.taille === 'PETIT' ? r.prixPetit : ligne.taille === 'DEUXIEME_SERVICE' ? r.prixDeuxiemeService : r.prixRegulier;
-  return { nom: r.nom, prix: parseFloat(prix) };
+  return { nom: r.nom, prix: prixLigne(ligne, ligne.selection) };
 }
 
 export function totalCommande(commande: Commande): number {
@@ -20,7 +18,7 @@ export function totalCommande(commande: Commande): number {
 export const LABEL_TAILLE: Record<string, string> = {
   PETIT: 'Petit repas',
   REGULIER: 'Repas régulier',
-  DEUXIEME_SERVICE: '+ 2ᵉ service',
+  DEUXIEME_SERVICE: 'Portion +',
 };
 
 export const LABEL_PAIEMENT: Record<string, string> = {
@@ -28,6 +26,7 @@ export const LABEL_PAIEMENT: Record<string, string> = {
   VIREMENT_INTERAC: 'Virement Interac',
   CHEQUE: 'Chèque',
   PAYPAL: 'Paypal',
-  PREPAYE: 'Prépayé',
+  PREPAYE: 'Entente annuelle',
+  SOLDE_PREPAYE: 'Solde prépayé',
   FONDATION: 'Fondation',
 };

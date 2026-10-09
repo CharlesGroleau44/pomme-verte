@@ -11,6 +11,9 @@ export const TYPES_ACCEPTES: Record<string, string> = {
   'image/jpeg': 'jpg',
   'image/png': 'png',
   'image/webp': 'webp',
+  // Le prospectus par institution (Institution.prospectusUrl) partage ce
+  // même endpoint d'upload.
+  'application/pdf': 'pdf',
 };
 
 export const TAILLE_MAX_OCTETS = 8 * 1024 * 1024; // 8 Mo

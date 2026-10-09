@@ -5,6 +5,7 @@ import Link from 'next/link';
 import StatTile from '../dashboard/StatTile';
 import TendanceHebdo from '../dashboard/TendanceHebdo';
 import EntreesRecentes from '../dashboard/EntreesRecentes';
+import { photo } from '@/lib/images';
 
 type Institution = {
   id: string;
@@ -84,7 +85,7 @@ export default function InstitutionsPage() {
             >
               <div className="flex items-center gap-3 min-w-0">
                 {i.logoUrl ? (
-                  <img src={i.logoUrl} alt="" className="h-9 w-9 rounded-full object-cover shrink-0 border border-pomme-soft" />
+                  <img {...photo(i.logoUrl, 160)} loading="lazy" decoding="async" alt="" className="h-9 w-9 rounded-full object-cover shrink-0 border border-pomme-soft" />
                 ) : (
                   <div className="h-9 w-9 rounded-full bg-gradient-to-br from-pomme-apple-light to-pomme-apple-mid shrink-0" />
                 )}

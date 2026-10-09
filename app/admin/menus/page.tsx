@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import StatTile from '../dashboard/StatTile';
 import TendanceHebdo from '../dashboard/TendanceHebdo';
 import EntreesRecentes from '../dashboard/EntreesRecentes';
-import { estActivementPublie } from '@/lib/menu-logic';
+import { estActivementPublie, estSemaineServiceCourante } from '@/lib/menu-logic';
 
 type Menu = {
   id: string;
@@ -14,8 +14,9 @@ type Menu = {
   institution: { id: string; nom: string };
   periodeDebut: string;
   periodeFin: string;
-  thematique: string | null;
+  thematiqueRef: { id: string; nom: string; photoUrl: string | null; numero: number | null } | null;
   dateLimiteCommande: string;
+  datePublication: string | null;
   publie: boolean;
   createdAt: string;
 };
@@ -42,15 +43,23 @@ export default function MenusPage() {
 
   useEffect(() => { charger(); }, []);
 
-  const togglePublication = async (m: Menu) => {
+  const togglePublication = async (m: Menu, confirmerDateLimite = false) => {
     const res = await fetch(`/api/menus/${m.id}/publish`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ publie: !m.publie }),
+      body: JSON.stringify({ publie: !m.publie, confirmerDateLimite }),
     });
     if (!res.ok) {
-      const { error } = await res.json();
-      alert(error); // TODO Claude Code : notification UI + surligner les journées vides
+      const { error, code } = await res.json();
+      // Date limite le jour du premier repas : suspect, mais légitime pour le
+      // premier menu de l'année. On demande confirmation au lieu de refuser.
+      if (code === 'DATE_LIMITE_APRES_PREMIER_REPAS' && confirm(error)) {
+        await togglePublication(m, true);
+        return;
+      }
+      if (code !== 'DATE_LIMITE_APRES_PREMIER_REPAS') {
+        alert(error); // TODO Claude Code : notification UI + surligner les journées vides
+      }
       return;
     }
     charger();
@@ -74,14 +83,28 @@ export default function MenusPage() {
 
   const fmt = (d: string) => new Date(d).toLocaleDateString('fr-CA', { timeZone: 'UTC' });
 
-  const menusActifs = menus.map((m) => ({ ...m, actif: estActivementPublie({ publie: m.publie, dateLimiteCommande: new Date(m.dateLimiteCommande) }) }));
+  const menusActifs = menus.map((m) => ({
+    ...m,
+    actif: estActivementPublie({
+      publie: m.publie,
+      dateLimiteCommande: new Date(m.dateLimiteCommande),
+      datePublication: m.datePublication ? new Date(m.datePublication) : null,
+    }),
+    // « Actif » (semaine de service courante) — voyant distinct de
+    // « Ouvert pour commander » (ci-dessus), voir lib/menu-logic.ts.
+    semaineActive: estSemaineServiceCourante({
+      publie: m.publie,
+      periodeDebut: new Date(m.periodeDebut),
+      periodeFin: new Date(m.periodeFin),
+    }),
+  }));
   const publies = menusActifs.filter((m) => m.actif).length;
   const recents = [...menus]
     .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     .slice(0, 5)
     .map((m) => ({
       id: m.id,
-      titre: m.thematique || 'Menu sans thématique',
+      titre: m.thematiqueRef ? `${m.thematiqueRef.nom}${m.thematiqueRef.numero ? ` ${m.thematiqueRef.numero}` : ''}` : 'Menu sans thématique',
       sousTitre: `${m.institution.nom} · ${fmt(m.periodeDebut)} au ${fmt(m.periodeFin)}`,
       date: new Date(m.createdAt),
       href: `/admin/menus/${m.id}`,
@@ -128,7 +151,7 @@ export default function MenusPage() {
           <div className="flex flex-wrap gap-2 mb-3">
             <button
               onClick={() => setFiltreInstitutionId(null)}
-              className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+              className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
                 filtreInstitutionId === null
                   ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
                   : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
@@ -140,7 +163,7 @@ export default function MenusPage() {
               <button
                 key={i.id}
                 onClick={() => setFiltreInstitutionId(i.id)}
-                className={`px-3 py-1.5 rounded-full text-xs font-medium border transition-colors ${
+                className={`min-h-[44px] px-4 py-2 rounded-full text-sm font-medium border transition-colors ${
                   filtreInstitutionId === i.id
                     ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep'
                     : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-deep'
@@ -160,7 +183,8 @@ export default function MenusPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div>
                     <div className="font-semibold text-sm text-pomme-ink">
-                      {m.institution.nom} — {fmt(m.periodeDebut)} au {fmt(m.periodeFin)}{m.thematique ? ` · ${m.thematique}` : ''}
+                      {m.institution.nom} — {fmt(m.periodeDebut)} au {fmt(m.periodeFin)}
+                      {m.thematiqueRef ? ` · ${m.thematiqueRef.nom}${m.thematiqueRef.numero ? ` ${m.thematiqueRef.numero}` : ''}` : ''}
                     </div>
                     <div className="flex flex-wrap gap-3 mt-1">
                       <Link href={`/admin/menus/${m.id}`} className="text-xs font-medium text-pomme-apple-deep hover:underline">
@@ -196,14 +220,25 @@ export default function MenusPage() {
                       </a>
                     </div>
                   </div>
-                  <button
-                    onClick={() => togglePublication(m)}
-                    className={`shrink-0 rounded-xl px-4 py-2.5 text-sm font-bold shadow-soft transition-colors ${
-                      m.actif ? 'bg-status-good text-white hover:opacity-90' : 'bg-status-critical text-white hover:opacity-90'
-                    }`}
-                  >
-                    {m.actif ? 'PUBLIÉ' : 'NON PUBLIÉ'}
-                  </button>
+                  <div className="shrink-0 flex flex-col items-end gap-1.5">
+                    <span
+                      className={`rounded-full px-3 py-1 text-xs font-bold ${
+                        m.semaineActive ? 'bg-status-good text-white' : 'bg-status-neutral/15 text-status-neutral'
+                      }`}
+                      title="Semaine de service courante"
+                    >
+                      {m.semaineActive ? 'ACTIF' : 'INACTIF'}
+                    </span>
+                    <button
+                      onClick={() => togglePublication(m)}
+                      className={`rounded-xl px-4 py-2.5 text-sm font-bold shadow-soft transition-colors ${
+                        m.actif ? 'bg-status-warning text-white hover:opacity-90' : 'bg-status-neutral text-white hover:opacity-90'
+                      }`}
+                      title="Ouvert pour commander (clic pour publier/dépublier)"
+                    >
+                      {m.actif ? 'OUVERT' : 'FERMÉ'}
+                    </button>
+                  </div>
                 </div>
 
                 {expireBienQuePublie && (

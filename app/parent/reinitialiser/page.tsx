@@ -3,8 +3,9 @@
 import { Suspense, useState } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { CHAMP } from '@/lib/ui';
 
-const INPUT = 'w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow';
+const INPUT = CHAMP;
 
 export default function ReinitialiserPage() {
   return (
@@ -29,7 +30,7 @@ function FormulaireReinitialiser() {
       <div className="max-w-sm mx-auto">
         <div className="bg-white rounded-2xl shadow-glow p-7 text-center space-y-3">
           <p className="text-sm font-semibold text-status-critical">Lien invalide.</p>
-          <Link href="/parent/mot-de-passe-oublie" className="text-sm font-medium text-pomme-apple-deep hover:underline">
+          <Link href="/parent/mot-de-passe-oublie" className="press inline-flex items-center min-h-[44px] -ml-1 px-1 text-sm font-medium text-pomme-apple-deep hover:underline">
             Refaire une demande
           </Link>
         </div>

@@ -24,6 +24,11 @@ model Institution {
   logoUrl           String?
   actif             Boolean  @default(true)
 
+  // Le dépliant/prospectus de l'institution (PDF, un par école — voir
+  // /api/upload et /api/photos/[filename]) — bouton "Voir le prospectus"
+  // sur la page publique du menu (Christine, courriel du 11 août 2026).
+  prospectusUrl     String?
+
   // Adresse
   adresse           String?
   ville             String?
@@ -51,14 +56,115 @@ model Institution {
   offreFondation    Boolean  @default(false)
   offreFormatPetit  Boolean  @default(false)
 
+  // Niveaux scolaires admissibles au format « Petit repas » (6,50$), pour
+  // les écoles qui le réservent à un sous-ensemble (ex. Jardin-des-Lacs et
+  // Notre-Dame-de-Liesse : maternelle seulement — Christine, courriels du
+  // 22 et 24 août 2026 : « ce n'est pas l'entente annuelle », le format
+  // Petit repas lui-même). Vide = tous les niveaux admissibles quand
+  // offreFormatPetit est actif, même patron que Repas.institutions.
+  niveauxFormatPetit String[] @default([])
+
+  // Bloc « politiques » imprimé au bas du menu PDF — ce que le prospectus
+  // papier de Christine porte et que notre PDF doit reprendre, sinon il ne
+  // remplace pas vraiment son document (voir lib/pdf/MenuDocument.tsx).
+  // Le repas dépannage est un champ à part parce que son prix varie d'une
+  // école à l'autre (8,00 $ partout sauf Plein Soleil à 8,50 $) ; le reste
+  // est du texte libre, identique partout aujourd'hui mais modifiable
+  // école par école sans toucher au code.
+  prixRepasDepannage Decimal? @db.Decimal(6, 2)
+  politiques         String?
+
+  // Plusieurs écoles partagent le même centre de services scolaire (donc le
+  // même calendrier officiel) — voir CalendrierScolaire ci-dessous. Optionnel :
+  // une institution sans calendrier rattaché garde le comportement actuel
+  // (lundi-vendredi sans exclusion), aucune régression pour les écoles pas
+  // encore configurées.
+  calendrierScolaireId String?
+  calendrierScolaire    CalendrierScolaire? @relation(fields: [calendrierScolaireId], references: [id])
+
   createdAt         DateTime @default(now())
   updatedAt         DateTime @default(now()) @updatedAt
 
-  menus     Menu[]
-  repas     Repas[]
-  enfants   Enfant[]
+  menus            Menu[]
+  repas            Repas[]
+  enfants          Enfant[]
+  demandesPrepaye  DemandePrepaye[]
+  elevesRegistre   EleveRegistre[]
 
   @@map("institutions")
+}
+
+// ------------------------------------------------------------------
+// EleveRegistre — le registre OFFICIEL de l'école (tous les élèves, avec
+// ou sans compte parent chez nous), importé du fichier Excel que Christine
+// reçoit de chaque école (courriel du 24 août 2026 : « listes élèves »).
+// Remplace la retranscription à la main sur sa feuille de présence papier
+// (mauve = entente annuelle, orange = Fondation, rouge = allergie) — ces
+// trois champs sont annotés une fois dans l'admin, puis ressortent à
+// chaque export Excel plutôt que d'être retapés chaque semaine.
+// Distinct d'Enfant : un enfant sur cette liste peut n'avoir aucun compte
+// parent chez nous (l'école a plus d'élèves que de comptes actifs).
+model EleveRegistre {
+  id              String   @id @default(cuid())
+  institutionId   String
+  nom             String
+  prenom          String
+  niveau          String
+  ententeAnnuelle Boolean  @default(false)
+  fondation       Boolean  @default(false)
+  allergie        String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @default(now()) @updatedAt
+
+  institution     Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  // Le niveau fait partie de la clé — pas juste nom+prénom — depuis que
+  // Christine a signalé deux vrais élèves homonymes à Brassard-Saint-Patrice
+  // (Jacob Roux : un en préscolaire, un en 5e année avec entente annuelle).
+  // Sans le niveau, le second écrasait silencieusement le premier à chaque
+  // import (voir cleEleve dans lib/normalisation.ts) — un homonyme n'est pas
+  // un cas rare dans une école de plusieurs centaines d'élèves.
+  @@unique([institutionId, nom, prenom, niveau])
+  @@map("eleves_registre")
+}
+
+// ------------------------------------------------------------------
+// Calendrier scolaire — un calendrier par centre de services scolaire (ou
+// école privée), PAS un par institution : Brassard-St-Patrice, Dominique-Savio
+// et St-Pie X partagent par exemple le même calendrier de la CSS des Sommets
+// (Magog). Sert à exclure automatiquement les journées pédagogiques et congés
+// de la génération des menus (voir lib/menu-logic.ts::genererJourneesOuvrables)
+// — remplace la génération aveugle lundi-vendredi.
+//
+// Les jours sont stockés comme une liste de jours FERMÉS (pas ouverts) :
+// une année scolaire a ~180 jours de classe contre ~20 jours pédagogiques +
+// quelques congés, donc la liste des fermetures est la plus courte à tenir à
+// jour et la plus simple à corriger à la main dans l'admin (voir
+// /admin/calendriers) — pas d'import PDF automatisé dans l'app (le format
+// varie par centre de services scolaire et change d'une année à l'autre,
+// import fait manuellement en base au besoin, voir DEPLOIEMENT-VPS.md).
+model CalendrierScolaire {
+  id           String   @id @default(cuid())
+  nom          String
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @default(now()) @updatedAt
+
+  institutions Institution[]
+  joursFermes  JourFermeCalendrier[]
+
+  @@map("calendriers_scolaires")
+}
+
+model JourFermeCalendrier {
+  id                   String   @id @default(cuid())
+  calendrierScolaireId String
+  date                 DateTime @db.Date
+  motif                String?
+
+  calendrierScolaire   CalendrierScolaire @relation(fields: [calendrierScolaireId], references: [id], onDelete: Cascade)
+
+  @@unique([calendrierScolaireId, date])
+  @@map("jours_fermes_calendrier")
 }
 
 // ------------------------------------------------------------------
@@ -80,6 +186,7 @@ model Repas {
   prixPetit           Decimal  @db.Decimal(6, 2)
   prixRegulier        Decimal  @db.Decimal(6, 2)
   prixDeuxiemeService Decimal  @db.Decimal(6, 2)
+  vegetarien          Boolean  @default(false)
   createdAt           DateTime @default(now())
 
   selections          MenuJourneeSelection[]
@@ -108,17 +215,48 @@ model Menu {
   institutionId       String
   periodeDebut        DateTime @db.Date
   periodeFin          DateTime @db.Date
-  thematique          String?
+  thematiqueId        String?
   dateLimiteCommande  DateTime @db.Date
+  // Ouverture automatique — pendant de dateLimiteCommande (fermeture
+  // automatique, voir estActivementPublie). Demandé par Christine (courriel
+  // du 16 août 2026) après qu'un menu construit d'avance mais publié tout
+  // de suite ait été commandé prématurément par plusieurs parents. Nullable
+  // : absent = toujours visible dès que publie=true, comme avant — ne
+  // s'applique qu'aux menus qui le renseignent explicitement.
+  datePublication     DateTime? @db.Date
   pdfUrl              String?
   publie              Boolean  @default(false)
   createdAt           DateTime @default(now())
 
-  institution         Institution @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  institution         Institution  @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+  thematiqueRef       Thematique?  @relation(fields: [thematiqueId], references: [id], onDelete: SetNull)
   journees            MenuJournee[]
   commandes           Commande[]
 
   @@map("menus")
+}
+
+// ------------------------------------------------------------------
+// Thematique — l'habillage d'un cycle de menus (« Passeport Gourmand »,
+// « Tour du monde »…). Change environ une fois par mois et s'applique
+// TOUJOURS à toutes les institutions en même temps : d'où une entité à
+// part plutôt qu'un champ recopié sur chaque menu. Renommer la
+// thématique ou changer son image met à jour toutes les écoles d'un
+// coup, sans rouvrir les menus un par un.
+//
+// Les menus passés gardent leur thématique historique : on ne supprime
+// pas une thématique utilisée, on en crée simplement une nouvelle.
+// ------------------------------------------------------------------
+model Thematique {
+  id        String   @id @default(cuid())
+  nom       String
+  photoUrl  String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  menus     Menu[]
+
+  @@map("thematiques")
 }
 
 // ------------------------------------------------------------------
@@ -184,11 +322,17 @@ model CompteParent {
   motDePasseHash String
   nom            String
   telephone      String?
-  // Client ayant réglé une entente annuelle directement avec le traiteur —
-  // bascule admin (voir /admin/parents) ; quand actif, le checkout de ce
-  // parent saute complètement l'étape "mode de paiement" (voir
-  // FormulaireCommande.tsx), la commande est enregistrée en PREPAYE.
-  prepayeAnnuel  Boolean  @default(false)
+  // Solde prépayé libre — un parent avance un montant de son choix (voir
+  // Christine, courriels des 10-11 août 2026, paliers 70/140/210/280$),
+  // débité au tarif réel de chaque commande (pas de rabais). Reste au
+  // niveau du COMPTE (partagé entre tous les enfants) — contrairement à
+  // l'entente annuelle, qui est un forfait à taux fixe PAR ENFANT depuis le
+  // 17 août 2026 (voir Enfant ci-dessous) : Christine a demandé que
+  // chaque enfant ait son propre forfait de 180 repas, plutôt qu'un
+  // bassin partagé qui se viderait deux fois plus vite pour une famille à
+  // deux enfants, tout en gardant UN SEUL compte/connexion par famille.
+  soldePrepayeActif Boolean        @default(false)
+  depotsPrepayes    DepotPrepaye[]
   // Préremplit le sélecteur de paiement à la prochaine commande (voir
   // FormulaireCommande.tsx) — pure confort, n'a aucun effet si le parent
   // est prepayeAnnuel (le mode est alors toujours forcé à PREPAYE).
@@ -205,8 +349,79 @@ model CompteParent {
 
   enfants        Enfant[]
   commandes      Commande[]
+  demandesPrepaye DemandePrepaye[]
 
   @@map("comptes_parents")
+}
+
+// ------------------------------------------------------------------
+// DepotPrepaye — un dépôt reçu hors ligne (argent, chèque, virement) que
+// Christine crédite manuellement au compte d'un parent (voir
+// lib/solde-prepaye.ts). Registre d'écriture seule — jamais modifié après
+// coup, seulement supprimé en cas d'erreur de saisie (voir DELETE
+// /api/admin/parents/[id]/depots/[depotId]). Le solde disponible n'est
+// JAMAIS stocké : il se calcule en sommant ces dépôts moins le coût des
+// commandes déjà envoyées en SOLDE_PREPAYE — la vérité vient toujours des
+// enregistrements réels, jamais d'un compteur qui pourrait dériver.
+//
+// `motif` distingue un dépôt saisi par Christine (null) d'un crédit
+// d'absence accordé automatiquement au parent (voir lib/absence.ts) —
+// utile pour qu'elle comprenne d'où vient chaque ligne en consultant
+// /admin/parents, sans avoir à s'en souvenir.
+// ------------------------------------------------------------------
+model DepotPrepaye {
+  id             String   @id @default(cuid())
+  compteParentId String
+  montant        Decimal  @db.Decimal(7, 2)
+  motif          String?
+  createdAt      DateTime @default(now())
+
+  compteParent   CompteParent @relation(fields: [compteParentId], references: [id], onDelete: Cascade)
+
+  @@map("depots_prepayes")
+}
+
+// ------------------------------------------------------------------
+// Demande de prépaiement — un parent manifeste son intérêt pour l'entente
+// annuelle ou le solde prépayé depuis la page publique. Remplace le lien
+// « nous écrire » (mailto), qui perdait le contexte : ici l'institution
+// d'où part la demande est enregistrée avec elle, donc Christine sait
+// toujours de quelle école il s'agit sans avoir à le demander (voir
+// Christine, courriel du 11 août 2026).
+//
+// C'est une simple boîte de réception : rien ne s'active automatiquement.
+// Christine communique avec le parent, reçoit le paiement hors ligne, puis
+// active le mode voulu depuis /admin/parents comme avant.
+// ------------------------------------------------------------------
+enum FormulePrepaye {
+  ENTENTE
+  SOLDE
+}
+
+model DemandePrepaye {
+  id             String         @id @default(cuid())
+  institutionId  String
+  formule        FormulePrepaye
+  nomParent      String
+  courriel       String
+  telephone      String?
+  nomEnfant      String?
+  message        String?
+  traitee        Boolean        @default(false)
+  createdAt      DateTime       @default(now())
+
+  institution    Institution    @relation(fields: [institutionId], references: [id], onDelete: Cascade)
+
+  // Lié au compte du parent depuis la fusion demande+inscription (17 août
+  // 2026, courriel de Christine) — la demande ne part plus jamais sans
+  // compte associé. Nullable pour ne pas casser les demandes historiques
+  // (formulaire public d'avant la fusion, jamais rattachées à un compte) ;
+  // SetNull plutôt que Cascade pour que la demande reste lisible dans
+  // /admin/demandes même si le compte est un jour supprimé.
+  compteParentId String?
+  compteParent   CompteParent?  @relation(fields: [compteParentId], references: [id], onDelete: SetNull)
+
+  @@map("demandes_prepaye")
 }
 
 // ------------------------------------------------------------------
@@ -225,6 +440,21 @@ model Enfant {
   niveau           String   // "Préscolaire" | "1".."6" | "Adulte"
   intolerances     String[] // sous-ensemble de "Gluten"/"Lactose"/"Végétarien"
   autreIntolerance String?
+  // Entente annuelle — forfait à taux fixe (1 170$/180 repas, voir
+  // lib/entente.ts), PAR ENFANT depuis le 17 août 2026 (Christine : chaque
+  // enfant a son propre forfait, mais le parent garde un seul compte). Quand
+  // actif, le checkout de CET enfant saute l'étape "mode de paiement" (voir
+  // FormulaireCommande.tsx), sa commande est enregistrée en PREPAYE.
+  //
+  // Le solde de repas restants N'EST PAS stocké ici — il se calcule en
+  // comptant les lignes de commande de CET enfant déjà envoyées en PREPAYE
+  // (voir lib/entente.ts). Un compteur à part se désynchroniserait à la
+  // première modification ou annulation de commande.
+  prepayeAnnuel              Boolean   @default(false)
+  ententeVersements          Int?      // 1 ou 2 — nombre de versements choisi
+  ententeDate2eVersement     DateTime? @db.Date // échéance du 2e versement, si versements = 2
+  ententeVerse2Paye          Boolean   @default(false) // coché par Christine à la réception du paiement
+  ententeDernierRappelEnvoye DateTime? // anti-spam du rappel automatique (voir /api/taches/rappel-versement-entente)
   createdAt        DateTime @default(now())
 
   compteParent     CompteParent @relation(fields: [compteParentId], references: [id], onDelete: Cascade)
@@ -240,6 +470,7 @@ enum ModePaiement {
   CHEQUE
   PAYPAL
   PREPAYE
+  SOLDE_PREPAYE
   FONDATION
 }
 
@@ -260,6 +491,13 @@ model Commande {
   payeLe         DateTime?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now()) @updatedAt
+  // Digest quotidien à l'école (voir /api/taches/digest-commandes) —
+  // remplace l'avis immédiat par commande, demandé par Christine (courriel
+  // du 16 août 2026 : « 51 courriels en 1 »). Null = pas encore inclus dans
+  // un digest — enregistrerCommande() le remet à null à chaque
+  // modification d'une commande existante, pour qu'elle soit reprise au
+  // digest suivant sans jamais comparer à updatedAt (voir lib/commandes.ts).
+  avisEcoleEnvoyeLe DateTime?
 
   compteParent   CompteParent    @relation(fields: [compteParentId], references: [id], onDelete: Cascade)
   enfant         Enfant          @relation(fields: [enfantId], references: [id], onDelete: Cascade)
@@ -288,6 +526,17 @@ model LigneCommande {
   journeeId   String
   selectionId String
   taille      TailleRepas
+  // Commande tardive (dépannage) — ajoutée après la date limite normale,
+  // au tarif dépannage de l'institution (Institution.prixRepasDepannage)
+  // plutôt qu'au tarif du repas sélectionné (voir
+  // lib/commandes.ts::enregistrerCommandeTardive, Christine, courriels des
+  // 8-9 septembre 2026). prixOverride fige le montant facturé au moment de
+  // la commande — un changement ultérieur du tarif dépannage ne doit
+  // jamais réécrire l'historique. tardive sert à l'affichage/filtrage
+  // (admin, rapports) ; selectionId reste requis mais n'est qu'indicatif
+  // pour ces lignes (repas au choix du chef, jamais un vrai choix client).
+  tardive      Boolean  @default(false)
+  prixOverride Decimal? @db.Decimal(6, 2)
 
   commande    Commande             @relation(fields: [commandeId], references: [id], onDelete: Cascade)
   journee     MenuJournee          @relation(fields: [journeeId], references: [id], onDelete: Cascade)
@@ -295,4 +544,31 @@ model LigneCommande {
 
   @@unique([commandeId, journeeId])
   @@map("lignes_commande")
+}
+
+// ------------------------------------------------------------------
+// CompteAdmin — les comptes qui se connectent à la console de gestion
+// (/admin/*), distincts des CompteParent (espace parent, ailleurs).
+// ADMIN : accès complet, y compris cette page de gestion des comptes.
+// GESTIONNAIRE : accès à tout le reste (institutions, repas, menus,
+// commandes, parents) mais jamais à /admin/utilisateurs — voir
+// middleware.ts, qui applique cette restriction à partir du rôle
+// embarqué dans le jeton de session (lib/session.ts).
+// ------------------------------------------------------------------
+enum RoleAdmin {
+  ADMIN
+  GESTIONNAIRE
+}
+
+model CompteAdmin {
+  id             String    @id @default(cuid())
+  courriel       String    @unique
+  motDePasseHash String
+  nom            String
+  role           RoleAdmin @default(GESTIONNAIRE)
+  actif          Boolean   @default(true)
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @default(now()) @updatedAt
+
+  @@map("comptes_admin")
 }

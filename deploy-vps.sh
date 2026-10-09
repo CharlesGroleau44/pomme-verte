@@ -52,7 +52,12 @@ cp -a node_modules/.prisma /opt/pommeverte/actuel.new/node_modules/.prisma
 cp -a node_modules/@prisma/client /opt/pommeverte/actuel.new/node_modules/@prisma/client
 
 echo "   Bascule (avec sauvegarde de la version précédente)…"
-rm -rf /opt/pommeverte/actuel.prev
+# sudo : un résidu d'\''actuel.prev appartenant à pommevertapp (ancienne
+# tentative de cloisonnement par utilisateur dédié, jamais nettoyée) fait
+# échouer un simple rm en tant que ubuntu — découvert le 11 septembre 2026,
+# ce qui bloquait silencieusement TOUT déploiement depuis (set -e arrêtait
+# le script ici, avant même le redémarrage du service).
+sudo rm -rf /opt/pommeverte/actuel.prev
 [ -d /opt/pommeverte/actuel ] && mv /opt/pommeverte/actuel /opt/pommeverte/actuel.prev
 mv /opt/pommeverte/actuel.new /opt/pommeverte/actuel
 '
@@ -69,7 +74,7 @@ else
   echo "⚠️  L'app ne répond pas correctement (HTTP $CODE) — RETOUR ARRIÈRE…"
   ssh "$VPS" 'set -e
     if [ -d /opt/pommeverte/actuel.prev ]; then
-      rm -rf /opt/pommeverte/actuel.echec
+      sudo rm -rf /opt/pommeverte/actuel.echec
       mv /opt/pommeverte/actuel /opt/pommeverte/actuel.echec
       mv /opt/pommeverte/actuel.prev /opt/pommeverte/actuel
       sudo systemctl restart pommeverte.service

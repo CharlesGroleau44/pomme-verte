@@ -5,6 +5,8 @@
 // partant des valeurs effectives) et bouton Supprimer (libère le
 // repas pour cette journée).
 import { useState } from 'react';
+import { CHAMP_DENSE } from '@/lib/ui';
+import { photo } from '@/lib/images';
 
 export type Selection = {
   id: string;
@@ -25,7 +27,7 @@ export type Selection = {
   };
 };
 
-const INPUT = 'w-full border border-pomme-line/50 rounded-lg px-2.5 py-1.5 text-xs focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep';
+const INPUT = CHAMP_DENSE;
 
 export default function CarteSelection({ selection, onChange }: { selection: Selection; onChange: () => void }) {
   const [enEdition, setEnEdition] = useState(false);
@@ -111,7 +113,7 @@ export default function CarteSelection({ selection, onChange }: { selection: Sel
             <input value={form.prixRegulier} onChange={(e) => setForm({ ...form, prixRegulier: e.target.value })} className={`${INPUT} mt-0.5`} />
           </label>
           <label className="text-[10px] font-medium text-pomme-ink/70">
-            + 2ᵉ service
+            Portion +
             <input value={form.prixDeuxiemeService} onChange={(e) => setForm({ ...form, prixDeuxiemeService: e.target.value })} className={`${INPUT} mt-0.5`} />
           </label>
         </div>
@@ -133,7 +135,7 @@ export default function CarteSelection({ selection, onChange }: { selection: Sel
   return (
     <div className="border border-pomme-line/40 rounded-xl p-3 flex items-center gap-3">
       {selection.repas.photoUrl ? (
-        <img src={selection.repas.photoUrl} alt="" className="w-11 h-11 object-cover rounded-lg border border-pomme-soft shrink-0" />
+        <img {...photo(selection.repas.photoUrl, 160)} alt="" className="w-11 h-11 object-cover rounded-lg border border-pomme-soft shrink-0" />
       ) : (
         <div className="w-11 h-11 rounded-lg bg-pomme-soft shrink-0" />
       )}
@@ -141,7 +143,7 @@ export default function CarteSelection({ selection, onChange }: { selection: Sel
         <div className="text-sm font-semibold truncate">{nomEffectif}</div>
         {descEffective && <div className="text-xs font-medium text-pomme-ink/70 truncate">{descEffective}</div>}
         <div className="text-xs font-medium text-pomme-ink/60">
-          Petit {prixPetitEffectif}$ · Régulier {prixRegulierEffectif}$ · 2ᵉ service {prixDeuxiemeEffectif}$
+          Petit {prixPetitEffectif}$ · Régulier {prixRegulierEffectif}$ · Portion + {prixDeuxiemeEffectif}$
         </div>
         {estModifiee && <span className="text-[10px] font-medium bg-status-warning/10 text-status-warning rounded-full px-2 py-0.5 inline-block mt-1">modifié pour cette journée</span>}
       </div>

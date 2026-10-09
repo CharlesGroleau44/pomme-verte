@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { hacherMotDePasse } from '@/lib/parent-auth';
 import { creerJetonParent, secretSession } from '@/lib/parent-session';
 import { NIVEAUX_VALIDES, INTOLERANCES_VALIDES } from '@/lib/commandes';
+import { envoyerBienvenueParent, envoyerCourrielsDemandePrepaye } from '@/lib/courriels-envois';
 
 export const dynamic = 'force-dynamic';
 
@@ -27,6 +28,14 @@ export async function POST(req: NextRequest) {
     : [];
   const autreIntolerance = typeof body.enfantAutreIntolerance === 'string' && body.enfantAutreIntolerance.trim()
     ? body.enfantAutreIntolerance.trim() : null;
+
+  // Formule de paiement demandée à l'inscription — fusion demande+compte
+  // (Christine, courriel du 14 août 2026 : « soustraire la demande...et
+  // les diriger directement à l'ouverture de compte »). N'active rien :
+  // ça crée seulement la DemandePrepaye que Christine traite comme avant,
+  // depuis /admin/demandes puis /admin/parents — mais sans le
+  // courriel « voici la marche à suivre », puisque le compte existe déjà.
+  const formule = typeof body.formule === 'string' ? body.formule : '';
 
   if (!courriel || !courriel.includes('@')) {
     return NextResponse.json({ error: 'Courriel invalide.' }, { status: 400 });
@@ -62,6 +71,23 @@ export async function POST(req: NextRequest) {
     });
     return p;
   });
+
+  void envoyerBienvenueParent({ a: parent.courriel, nom: parent.nom });
+
+  if (formule === 'ENTENTE' || formule === 'SOLDE') {
+    const demande = await prisma.demandePrepaye.create({
+      data: {
+        institutionId,
+        formule,
+        nomParent: nom,
+        courriel,
+        telephone,
+        nomEnfant: `${prenom} ${nomDeFamille}`,
+        compteParentId: parent.id,
+      },
+    });
+    void envoyerCourrielsDemandePrepaye(demande.id);
+  }
 
   const jeton = await creerJetonParent(parent.id, secretSession());
 

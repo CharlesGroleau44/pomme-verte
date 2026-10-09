@@ -3,16 +3,18 @@
 import { useState } from 'react';
 import { useParentCompte, type Enfant } from '../ContexteParent';
 import { IconeModifier } from '../../Icones';
+import { CHAMP } from '@/lib/ui';
+import { photo } from '@/lib/images';
 
 const NIVEAUX = ['Préscolaire', '1', '2', '3', '4', '5', '6', 'Adulte'];
 const INTOLERANCES = ['Gluten', 'Lactose', 'Végétarien'];
-const INPUT = 'w-full border border-pomme-line/50 rounded-xl px-3.5 py-2.5 text-sm mt-1 focus:outline-none focus:ring-2 focus:ring-pomme-apple-mid/40 focus:border-pomme-apple-deep transition-shadow';
+const INPUT = CHAMP;
 
 function Pilule({ actif, onClick, children }: { actif: boolean; onClick: () => void; children: React.ReactNode }) {
   return (
     <button
       type="button" onClick={onClick}
-      className={`press px-3 py-1.5 rounded-full text-xs font-medium border transition-all duration-200 ${
+      className={`press min-h-[44px] px-4 py-2 rounded-full text-sm font-medium border transition-all duration-200 ${
         actif ? 'bg-pomme-apple-deep text-white border-pomme-apple-deep shadow-soft scale-105' : 'bg-white border-pomme-line/60 text-pomme-ink/85 hover:border-pomme-apple-mid hover:text-pomme-apple-deep'
       }`}
     >
@@ -148,7 +150,7 @@ export default function EnfantsPage() {
       <div className="animate-fade-in-up flex items-center justify-between">
         <h2 className="text-xl font-display font-semibold text-pomme-leaf-deep">Mes enfants</h2>
         {!ajoutOuvert && (
-          <button onClick={() => setAjoutOuvert(true)} className="text-sm font-semibold text-pomme-apple-deep hover:underline">
+          <button onClick={() => setAjoutOuvert(true)} className="press inline-flex items-center min-h-[44px] -ml-1 px-1 text-sm font-semibold text-pomme-apple-deep hover:underline">
             + Ajouter un enfant
           </button>
         )}
@@ -172,7 +174,7 @@ export default function EnfantsPage() {
             ) : (
               <div className="flex items-center gap-3.5">
                 {e.institution.logoUrl ? (
-                  <img src={e.institution.logoUrl} alt="" className="h-11 w-11 rounded-xl object-contain bg-pomme-soft p-1 shrink-0" />
+                  <img {...photo(e.institution.logoUrl, 160)} alt="" className="h-11 w-11 rounded-xl object-contain bg-pomme-soft p-1 shrink-0" />
                 ) : (
                   <div className="h-11 w-11 rounded-xl bg-pomme-soft shrink-0" />
                 )}
@@ -190,7 +192,7 @@ export default function EnfantsPage() {
                   )}
                 </div>
                 <div className="flex flex-col items-end gap-2 shrink-0">
-                  <button onClick={() => setEditionId(e.id)} className="flex items-center gap-1.5 text-xs font-semibold text-pomme-apple-deep hover:underline">
+                  <button onClick={() => setEditionId(e.id)} className="press inline-flex items-center gap-1.5 min-h-[44px] -ml-1 px-1 text-sm font-semibold text-pomme-apple-deep hover:underline">
                     <IconeModifier /> Modifier
                   </button>
                   <button onClick={() => retirer(e.id)} className="text-xs font-medium text-status-critical hover:underline">

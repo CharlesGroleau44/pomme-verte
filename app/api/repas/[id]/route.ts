@@ -16,6 +16,7 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
       prixPetit: body.prixPetit,
       prixRegulier: body.prixRegulier,
       prixDeuxiemeService: body.prixDeuxiemeService,
+      vegetarien: body.vegetarien,
       // institutionIds : liste complète — remplace l'association existante
       // (vide = disponible pour toutes les institutions).
       institutions: Array.isArray(body.institutionIds)
