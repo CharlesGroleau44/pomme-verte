@@ -20,10 +20,13 @@ export async function GET() {
   const compteurParNom = new Map<string, number>();
   const parCreation = [...thematiques].sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime());
   const numeroParId = new Map<string, number>();
+  const totalParNom = new Map<string, number>();
+  for (const t of parCreation) totalParNom.set(t.nom, (totalParNom.get(t.nom) ?? 0) + 1);
   for (const t of parCreation) {
     const n = (compteurParNom.get(t.nom) ?? 0) + 1;
     compteurParNom.set(t.nom, n);
-    numeroParId.set(t.id, n);
+    // Un nom unique n'a pas de « cycle 1 » à distinguer — pas de numéro.
+    if ((totalParNom.get(t.nom) ?? 0) > 1) numeroParId.set(t.id, n);
   }
   const thematiquesAvecNumero = thematiques.map((t) => ({ ...t, numero: numeroParId.get(t.id) ?? null }));
 

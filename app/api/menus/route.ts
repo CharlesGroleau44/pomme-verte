@@ -31,10 +31,13 @@ export async function GET() {
     : [];
   const numeroParThematiqueId = new Map<string, number>();
   const compteurParNom = new Map<string, number>();
+  const totalParNom = new Map<string, number>();
+  for (const t of toutesThematiquesParNom) totalParNom.set(t.nom, (totalParNom.get(t.nom) ?? 0) + 1);
   for (const t of toutesThematiquesParNom) {
     const n = (compteurParNom.get(t.nom) ?? 0) + 1;
     compteurParNom.set(t.nom, n);
-    numeroParThematiqueId.set(t.id, n);
+    // Un nom unique n'a pas de « cycle 1 » à distinguer — pas de numéro.
+    if ((totalParNom.get(t.nom) ?? 0) > 1) numeroParThematiqueId.set(t.id, n);
   }
 
   const menusAvecNumero = menus.map((m) => ({
