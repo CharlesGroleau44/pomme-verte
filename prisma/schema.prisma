@@ -64,6 +64,13 @@ model Institution {
   // offreFormatPetit est actif, même patron que Repas.institutions.
   niveauxFormatPetit String[] @default([])
 
+  // Services de dîner de l'école pour la feuille cuisine imprimée — un
+  // élément par service, niveaux séparés par des virgules (ex. ["1,2,3",
+  // "4,5,6"] pour Plein Soleil : 1re-2e-3e ensemble, puis 4e-5e-6e). Vide =
+  // une seule liste alphabétique, comme avant. Le regroupement diffère d'une
+  // école à l'autre (Christine, 26 octobre 2026), d'où un réglage par école.
+  servicesNiveaux    String[] @default([])
+
   // Bloc « politiques » imprimé au bas du menu PDF — ce que le prospectus
   // papier de Christine porte et que notre PDF doit reprendre, sinon il ne
   // remplace pas vraiment son document (voir lib/pdf/MenuDocument.tsx).
@@ -113,6 +120,11 @@ model EleveRegistre {
   ententeAnnuelle Boolean  @default(false)
   fondation       Boolean  @default(false)
   allergie        String?
+  // Groupe-classe du préscolaire (« 0.N.R », « 0.K »…) — déduit des initiales
+  // de la colonne « Titulaire » du fichier de l'école (Christine, courriel du
+  // 26 octobre 2026 : Plein Soleil sépare ses préscolaires par classe). Nul
+  // pour tous les autres élèves ; sert uniquement à ranger la feuille cuisine.
+  groupe          String?
   createdAt       DateTime @default(now())
   updatedAt       DateTime @default(now()) @updatedAt
 

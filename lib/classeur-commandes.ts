@@ -112,150 +112,244 @@ export async function construireClasseurCommandes(
   // ------------------------------------------------------------------
   // Feuille 1 — CUISINE (la feuille du comptoir)
   // ------------------------------------------------------------------
+  // Imprimable telle quelle sur du 8,5 × 11 po (Christine, 26 octobre 2026 :
+  // « on refait toutes les cases pour qu'elles soient imprimables ») — voir
+  // pageSetup plus bas : portrait, une page de large, entêtes répétés.
   const cuisine = classeur.addWorksheet('Cuisine', {
     views: [{ state: 'frozen', xSplit: 1, ySplit: 3 }], // le nom et les entêtes restent visibles
   });
 
-  // 3 sous-colonnes par journée : Menu 1, Menu 2, P (Portion +) — décalées
-  // d'une colonne par la colonne Niveau (voir ci-dessous).
+  // 3 sous-colonnes par journée : M1, M2, P (Portion +) — décalées d'une
+  // colonne par la colonne N (niveau, voir ci-dessous).
   const COLS_PAR_JOUR = 3;
   const COL_JOURS_DEBUT = 3;
+  const derniereColonne = (COL_JOURS_DEBUT - 1) + journees.length * COLS_PAR_JOUR;
+  const estDebutJour = (c: number) => c >= COL_JOURS_DEBUT && (c - COL_JOURS_DEBUT) % COLS_PAR_JOUR === 0;
+  const GRIS_SEPARATION = 'FF9A9A9A';
+
   cuisine.getCell(1, 1).value = titre;
-  cuisine.getCell(1, 1).font = { bold: true, size: 13, color: { argb: VERT } };
+  cuisine.getCell(1, 1).font = { bold: true, size: 12, color: { argb: VERT } };
 
   cuisine.getCell(2, 1).value = 'NOMS';
+  cuisine.getCell(2, 1).font = { bold: true, size: 10 };
   journees.forEach((j, i) => {
     const c = COL_JOURS_DEBUT + i * COLS_PAR_JOUR;
     const cel = cuisine.getCell(2, c);
-    cel.value = `${j.jourSemaine} ${jourDuMoisUTC(j.date.toISOString())}`;
+    // Jour abrégé (« Mer 18 ») : la case fusionnée ne fait que trois petites
+    // colonnes de large, le nom complet ne tiendrait pas sur la page.
+    cel.value = `${j.jourSemaine.slice(0, 3)} ${jourDuMoisUTC(j.date.toISOString())}`;
     cuisine.mergeCells(2, c, 2, c + COLS_PAR_JOUR - 1);
     cel.alignment = { horizontal: 'center' };
-    cel.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cel.font = { bold: true, size: 9, color: { argb: 'FFFFFFFF' } };
     cel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERT } };
+    cel.border = { left: { style: 'thin', color: { argb: 'FFFFFFFF' } } };
 
-    ['Menu 1', 'Menu 2', 'P'].forEach((sous, k) => {
+    ['M1', 'M2', 'P'].forEach((sous, k) => {
       const sc = cuisine.getCell(3, c + k);
       sc.value = sous;
-      sc.font = { bold: true, size: 10 };
+      sc.font = { bold: true, size: 9 };
       sc.alignment = { horizontal: 'center' };
       sc.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERT_PALE } };
+      if (k === 0) sc.border = { left: { style: 'thin', color: { argb: GRIS_SEPARATION } } };
     });
   });
   cuisine.getCell(3, 1).value = 'Nom, Prénom';
   cuisine.getCell(3, 1).font = { bold: true, size: 10 };
-  // Niveau en colonne 2 — demandé par Christine (courriel du 25 août 2026) :
-  // elle imprime par service de dîner (ex. maternelle = 1er service, 1re-3e
-  // = 2e, 4e-6e = 3e), un regroupement différent par école qu'elle fait
-  // elle-même dans Excel une fois la colonne disponible.
-  cuisine.getCell(3, 2).value = 'Niveau';
+  // N (niveau) en colonne 2. Pour le préscolaire on y met le code du groupe-
+  // classe (« 0.N.R ») quand l'école le connaît, sinon « 0 » — même écriture
+  // que sa liste papier, et c'est ce qui permet de jumeler une commande du
+  // site à la bonne ligne de sa liste.
+  cuisine.getCell(3, 2).value = 'N';
   cuisine.getCell(3, 2).font = { bold: true, size: 10 };
+  cuisine.getCell(3, 2).alignment = { horizontal: 'center' };
   cuisine.getCell(3, 2).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERT_PALE } };
 
-  const derniereColonne = (COL_JOURS_DEBUT - 1) + journees.length * COLS_PAR_JOUR;
-
-  // Registre officiel de l'école (voir EleveRegistre) — chargé AVANT la
-  // boucle des commandes, pour que la couleur mauve/orange s'applique aux
-  // DEUX cas, pas juste aux élèves du registre sans commande (voir plus
-  // bas). Correctif du 7 septembre 2026 : un élève en entente annuelle
-  // COMMANDE quand même chaque semaine (modePaiement PREPAYE, voir
-  // lib/entente.ts) — sa ligne venait donc TOUJOURS de la boucle des
-  // commandes réelles, qui n'appliquait jamais cette couleur. Résultat
-  // signalé par Christine : « l'entente/Fondation ne se reproduit pas
-  // nécessairement dans le fichier Excel » — en fait, elle ne s'appliquait
-  // quasiment JAMAIS pour ces élèves-là, puisqu'ils commandent presque
-  // toujours. cleEleve inclut le niveau (voir lib/normalisation.ts) pour ne
+  // Registre officiel de l'école (voir EleveRegistre) — chargé AVANT les
+  // lignes, pour que la couleur mauve/orange s'applique aux DEUX cas, pas
+  // juste aux élèves du registre sans commande. Correctif du 7 septembre 2026 :
+  // un élève en entente annuelle COMMANDE quand même chaque semaine
+  // (modePaiement PREPAYE, voir lib/entente.ts) — sa ligne venait donc
+  // TOUJOURS de la boucle des commandes réelles, qui n'appliquait jamais cette
+  // couleur. cleEleve inclut le niveau (voir lib/normalisation.ts) pour ne
   // jamais confondre deux élèves homonymes de niveaux différents.
   const registre = await prisma.eleveRegistre.findMany({ where: { institutionId: menu.institutionId } });
   const registreParCle = new Map(registre.map((e) => [cleEleve(e.nom, e.prenom, e.niveau), e]));
-  const fondCouleurRegistre = (nom: string, prenom: string, niveau: string): string | null => {
-    const entree = registreParCle.get(cleEleve(nom, prenom, niveau));
-    if (!entree) return null;
-    return entree.ententeAnnuelle ? MAUVE_ENTENTE : entree.fondation ? ORANGE_FONDATION : null;
+
+  // Une seule liste d'élèves : ceux qui ont commandé en ligne ET ceux du
+  // registre qui n'ont pas commandé (courriel de Christine du 25 août 2026 :
+  // « une seule liste », la cuisine y écrit à la main ses codes 0/P/V/T).
+  // Institution sans registre importé = seulement les commandes.
+  type LigneEleve = {
+    nom: string;
+    prenom: string;
+    niveau: string;
+    groupe: string | null;
+    allergies: string;
+    fond: string | null;
+    cmd: (typeof commandes)[number] | null;
+  };
+  const lignesEleves: LigneEleve[] = commandes.map((cmd) => {
+    const reg = registreParCle.get(cleEleve(cmd.enfant.nomDeFamille, cmd.enfant.prenom, cmd.enfant.niveau));
+    return {
+      nom: cmd.enfant.nomDeFamille,
+      prenom: cmd.enfant.prenom,
+      niveau: cmd.enfant.niveau,
+      groupe: reg?.groupe ?? null,
+      allergies: [...cmd.enfant.intolerances, cmd.enfant.autreIntolerance].filter(Boolean).join(', '),
+      fond: reg ? (reg.ententeAnnuelle ? MAUVE_ENTENTE : reg.fondation ? ORANGE_FONDATION : null) : null,
+      cmd,
+    };
+  });
+  const dejaCommande = new Set(commandes.map((c) => cleEleve(c.enfant.nomDeFamille, c.enfant.prenom, c.enfant.niveau)));
+  for (const e of registre) {
+    if (dejaCommande.has(cleEleve(e.nom, e.prenom, e.niveau))) continue;
+    lignesEleves.push({
+      nom: e.nom,
+      prenom: e.prenom,
+      niveau: e.niveau,
+      groupe: e.groupe,
+      allergies: e.allergie ?? '',
+      fond: e.ententeAnnuelle ? MAUVE_ENTENTE : e.fondation ? ORANGE_FONDATION : null,
+      cmd: null,
+    });
+  }
+  const parNom = (a: LigneEleve, b: LigneEleve) => {
+    const n = a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
+    return n !== 0 ? n : a.prenom.localeCompare(b.prenom, 'fr', { sensitivity: 'base' });
   };
 
-  commandes.forEach((cmd, idx) => {
-    const r = 4 + idx;
-    const nomCel = cuisine.getCell(r, 1);
-    const nomComplet = `${cmd.enfant.nomDeFamille}, ${cmd.enfant.prenom}`;
-    const allergies = [...cmd.enfant.intolerances, cmd.enfant.autreIntolerance].filter(Boolean).join(', ');
-    // Texte enrichi plutôt que deux cellules : le nom reste noir, l'allergie
-    // s'ajoute en rouge gras juste à côté — exactement la mécanique papier
-    // de Christine, pas une colonne de plus à consulter séparément.
-    nomCel.value = allergies
-      ? { richText: [
-          { text: nomComplet, font: { bold: true } },
-          { text: `  — ${allergies}`, font: { bold: true, color: { argb: ROUGE_ALLERGIE } } },
-        ] }
-      : nomComplet;
-    cuisine.getCell(r, 2).value = cmd.enfant.niveau;
-    cuisine.getCell(r, 2).alignment = { horizontal: 'center' };
-
-    const fondCouleur = fondCouleurRegistre(cmd.enfant.nomDeFamille, cmd.enfant.prenom, cmd.enfant.niveau);
-    if (fondCouleur) {
-      for (let c = 1; c <= derniereColonne; c++) {
-        cuisine.getCell(r, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fondCouleur } };
-      }
+  // Sections par service de dîner — réglage PAR ÉCOLE (Institution.
+  // servicesNiveaux : « 1,2,3 » puis « 4,5,6 » à Plein Soleil), plus un
+  // regroupement du préscolaire par classe quand le registre porte les
+  // titulaires. Sans réglage : une seule liste alphabétique, comme avant.
+  const services = menu.institution.servicesNiveaux.map((s) => s.split(',').map((x) => x.trim()).filter(Boolean));
+  const regroupe = services.length > 0;
+  type Section = { cle: string; titre: string | null; ordre: number; eleves: LigneEleve[] };
+  const sections = new Map<string, Section>();
+  const classer = (l: LigneEleve): Omit<Section, 'eleves'> => {
+    if (!regroupe) return { cle: 'tous', titre: null, ordre: 0 };
+    if (l.niveau === 'Préscolaire') {
+      return l.groupe
+        ? { cle: `g:${l.groupe}`, titre: `Préscolaire ${l.groupe}`, ordre: 100 }
+        : { cle: 'g:?', titre: 'Préscolaire — groupe à préciser', ordre: 200 };
     }
+    const i = services.findIndex((s) => s.includes(l.niveau));
+    return i >= 0
+      ? { cle: `s:${i}`, titre: `Niveaux ${services[i].join('-')}`, ordre: i }
+      : { cle: 'autres', titre: 'Autres niveaux', ordre: 300 };
+  };
+  for (const l of lignesEleves) {
+    const { cle, titre: t, ordre } = classer(l);
+    if (!sections.has(cle)) sections.set(cle, { cle, titre: t, ordre, eleves: [] });
+    sections.get(cle)!.eleves.push(l);
+  }
+  if (sections.size === 0) sections.set('tous', { cle: 'tous', titre: null, ordre: 0, eleves: [] });
+  const sectionsTriees = [...sections.values()]
+    .sort((a, b) => a.ordre - b.ordre || (a.titre ?? '').localeCompare(b.titre ?? '', 'fr'))
+    .map((s) => ({ ...s, eleves: s.eleves.sort(parNom) }));
 
-    for (const ligne of cmd.lignes) {
-      const iJour = journees.findIndex((j) => j.id === ligne.journeeId);
-      if (iJour < 0) continue;
-      // « Menu 1 » = la 1re sélection de la journée, « Menu 2 » = la 2e.
-      // C'est l'ordre d'ajout au montage du menu, le même que celui vu par
-      // le parent — pas un classement arbitraire.
-      const iSel = journees[iJour].selections.findIndex((s) => s.id === ligne.selectionId);
-      const c = COL_JOURS_DEBUT + iJour * COLS_PAR_JOUR + Math.max(0, iSel);
+  const bordureLigne = (r: number, fond: string | null) => {
+    for (let c = 1; c <= derniereColonne; c++) {
       const cel = cuisine.getCell(r, c);
-      cel.value = 1;
-      cel.alignment = { horizontal: 'center' };
-      if (ligne.taille === 'DEUXIEME_SERVICE') {
-        const p = cuisine.getCell(r, COL_JOURS_DEBUT + iJour * COLS_PAR_JOUR + 2);
-        p.value = 'P';
-        p.alignment = { horizontal: 'center' };
-        p.font = { bold: true };
-      }
+      cel.border = {
+        bottom: { style: 'hair', color: { argb: GRIS_SEPARATION } },
+        ...(estDebutJour(c) ? { left: { style: 'thin' as const, color: { argb: GRIS_SEPARATION } } } : {}),
+      };
+      if (fond) cel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fond } };
     }
-  });
+  };
 
-  // Élèves du registre qui n'ont PAS commandé en ligne pour ce menu — voir
-  // courriel de Christine du 25 août 2026 : « une seule liste », le
-  // registre fusionné à la feuille cuisine. Ajoutés SOUS les commandes
-  // réelles, sans aucune case de journée remplie : la cuisine y écrit ses
-  // codes 0/P/V/T à la main comme sur son ancienne feuille papier.
-  // Institution sans registre importé = liste vide, comportement inchangé.
-  const dejaCommande = new Set(commandes.map((c) => cleEleve(c.enfant.nomDeFamille, c.enfant.prenom, c.enfant.niveau)));
-  const registreSeuls = registre
-    .filter((e) => !dejaCommande.has(cleEleve(e.nom, e.prenom, e.niveau)))
-    .sort((a, b) => {
-      const n = a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
-      return n !== 0 ? n : a.prenom.localeCompare(b.prenom, 'fr', { sensitivity: 'base' });
-    });
+  let r = 4;
+  let premiereDataRow = r;
+  const sousTotaux: number[] = [];
+  let premierBlocPrescolaire = true;
 
-  registreSeuls.forEach((e, idx) => {
-    const r = 4 + commandes.length + idx;
-    const nomCel = cuisine.getCell(r, 1);
-    const nomComplet = `${e.nom}, ${e.prenom}`;
-    nomCel.value = e.allergie
-      ? { richText: [
-          { text: nomComplet, font: { bold: true } },
-          { text: `  — ${e.allergie}`, font: { bold: true, color: { argb: ROUGE_ALLERGIE } } },
-        ] }
-      : nomComplet;
-    cuisine.getCell(r, 2).value = e.niveau;
-    cuisine.getCell(r, 2).alignment = { horizontal: 'center' };
-
-    const fondCouleur = e.ententeAnnuelle ? MAUVE_ENTENTE : e.fondation ? ORANGE_FONDATION : null;
-    if (fondCouleur) {
+  sectionsTriees.forEach((section, iSection) => {
+    if (section.titre) {
+      // Un nouveau service = une nouvelle page (le comptoir sert un service
+      // à la fois) ; les groupes du préscolaire, courts, s'enchaînent après
+      // le premier saut de page.
+      const nouvellePage = iSection > 0 && (section.ordre < 100 || premierBlocPrescolaire);
+      if (section.ordre >= 100) premierBlocPrescolaire = false;
+      if (nouvellePage) cuisine.getRow(r - 1).addPageBreak();
+      const t = cuisine.getCell(r, 1);
+      t.value = section.titre;
+      t.font = { bold: true, size: 11, color: { argb: VERT } };
       for (let c = 1; c <= derniereColonne; c++) {
-        cuisine.getCell(r, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: fondCouleur } };
+        cuisine.getCell(r, c).fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERT_PALE } };
       }
+      cuisine.mergeCells(r, 1, r, derniereColonne);
+      r++;
+    }
+    const debutSection = r;
+    if (iSection === 0) premiereDataRow = r;
+
+    for (const l of section.eleves) {
+      const nomComplet = `${l.nom}, ${l.prenom}`;
+      // Texte enrichi plutôt que deux cellules : le nom reste noir, l'allergie
+      // s'ajoute en rouge gras juste à côté — exactement la mécanique papier
+      // de Christine, pas une colonne de plus à consulter séparément.
+      cuisine.getCell(r, 1).value = l.allergies
+        ? { richText: [
+            { text: nomComplet, font: { bold: true, size: 10 } },
+            { text: `  — ${l.allergies}`, font: { bold: true, size: 10, color: { argb: ROUGE_ALLERGIE } } },
+          ] }
+        : nomComplet;
+      if (!l.allergies) cuisine.getCell(r, 1).font = { size: 10 };
+      const celN = cuisine.getCell(r, 2);
+      celN.value = l.niveau === 'Préscolaire' ? (l.groupe ?? '0') : l.niveau;
+      celN.alignment = { horizontal: 'center' };
+      celN.font = { size: 9 };
+      bordureLigne(r, l.fond);
+
+      for (const ligne of l.cmd?.lignes ?? []) {
+        const iJour = journees.findIndex((j) => j.id === ligne.journeeId);
+        if (iJour < 0) continue;
+        // « M1 » = la 1re sélection de la journée, « M2 » = la 2e. C'est
+        // l'ordre d'ajout au montage du menu, le même que celui vu par le
+        // parent — pas un classement arbitraire.
+        const iSel = journees[iJour].selections.findIndex((s) => s.id === ligne.selectionId);
+        const c = COL_JOURS_DEBUT + iJour * COLS_PAR_JOUR + Math.max(0, iSel);
+        const cel = cuisine.getCell(r, c);
+        cel.value = 1;
+        cel.alignment = { horizontal: 'center' };
+        if (ligne.taille === 'DEUXIEME_SERVICE') {
+          const p = cuisine.getCell(r, COL_JOURS_DEBUT + iJour * COLS_PAR_JOUR + 2);
+          p.value = 'P';
+          p.alignment = { horizontal: 'center' };
+          p.font = { bold: true };
+        }
+      }
+      r++;
+    }
+
+    // Sous-total par service : ce que la cuisine prépare pour CE service.
+    if (regroupe) {
+      const rSous = r;
+      cuisine.getCell(rSous, 1).value = 'Sous-total';
+      cuisine.getCell(rSous, 1).font = { bold: true, size: 9 };
+      for (let i = 0; i < journees.length; i++) {
+        for (let k = 0; k < COLS_PAR_JOUR; k++) {
+          const c = COL_JOURS_DEBUT + i * COLS_PAR_JOUR + k;
+          const lettre = cuisine.getColumn(c).letter;
+          const cel = cuisine.getCell(rSous, c);
+          // Section vide : la plage serait inversée, on écrit simplement 0.
+          cel.value = section.eleves.length
+            ? { formula: `COUNTA(${lettre}${debutSection}:${lettre}${rSous - 1})`, result: undefined }
+            : 0;
+          cel.font = { bold: true, size: 9 };
+          cel.alignment = { horizontal: 'center' };
+        }
+      }
+      sousTotaux.push(rSous);
+      r++;
     }
   });
 
   // Lignes vierges pour les ajouts du jour — voir LIGNES_AJOUTS_DU_JOUR.
   // Une bordure pointillée sur chaque case marque clairement où écrire à
   // la main, sans imposer de nom de colonne que la cuisine devrait déduire.
-  const rEtiquetteAjout = 4 + commandes.length + registreSeuls.length;
+  const rEtiquetteAjout = r;
   const cLabel = cuisine.getCell(rEtiquetteAjout, 1);
   cLabel.value = 'AJOUTS DU JOUR (élèves ou profs inscrits sur place)';
   cLabel.font = { italic: true, size: 9, color: { argb: 'FF8A8A8A' } };
@@ -263,16 +357,17 @@ export async function construireClasseurCommandes(
 
   const rPremiereLigneVierge = rEtiquetteAjout + 1;
   const rDerniereLigneVierge = rPremiereLigneVierge + LIGNES_AJOUTS_DU_JOUR - 1;
-  for (let r = rPremiereLigneVierge; r <= rDerniereLigneVierge; r++) {
+  for (let rr = rPremiereLigneVierge; rr <= rDerniereLigneVierge; rr++) {
     for (let c = 1; c <= derniereColonne; c++) {
-      cuisine.getCell(r, c).border = { bottom: { style: 'dotted', color: { argb: 'FFC9C9C9' } } };
+      cuisine.getCell(rr, c).border = { bottom: { style: 'dotted', color: { argb: 'FFC9C9C9' } } };
     }
   }
 
-  // Totaux par jour — ce que la cuisine doit préparer. Christine les avait
-  // au bas de sa feuille ; ils étaient tapés à la main. La plage COUNTA
-  // couvre aussi les lignes d'ajouts du jour : un nom écrit à la main dans
-  // ces cases s'additionne tout seul, sans recalcul de la formule.
+  // Totaux par jour — ce que la cuisine doit préparer. Les ajouts du jour
+  // sont comptés par COUNTA : un nom écrit à la main dans ces cases
+  // s'additionne tout seul. Avec des services, le total général additionne
+  // les sous-totaux (jamais une plage continue : les titres de section et
+  // les sous-totaux s'y trouveraient comptés deux fois).
   const rTot = rDerniereLigneVierge + 1;
   cuisine.getCell(rTot, 1).value = 'TOTAUX';
   cuisine.getCell(rTot, 1).font = { bold: true };
@@ -281,26 +376,47 @@ export async function construireClasseurCommandes(
       const c = COL_JOURS_DEBUT + i * COLS_PAR_JOUR + k;
       const lettre = cuisine.getColumn(c).letter;
       const cel = cuisine.getCell(rTot, c);
+      const ajouts = `COUNTA(${lettre}${rPremiereLigneVierge}:${lettre}${rDerniereLigneVierge})`;
       // Une formule plutôt qu'un nombre figé : si Christine corrige une
       // case à la main, le total suit au lieu de mentir.
-      cel.value = { formula: `COUNTA(${lettre}4:${lettre}${rDerniereLigneVierge})`, result: undefined };
-      cel.font = { bold: true };
+      const formule = regroupe
+        ? `${sousTotaux.map((s) => `${lettre}${s}`).join('+')}+${ajouts}`
+        : `COUNTA(${lettre}${premiereDataRow}:${lettre}${rDerniereLigneVierge})`;
+      cel.value = { formula: formule, result: undefined };
+      cel.font = { bold: true, size: 9 };
       cel.alignment = { horizontal: 'center' };
       cel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERT_PALE } };
     }
   });
 
-  cuisine.getColumn(1).width = 34;
-  cuisine.getColumn(2).width = 10;
-  for (let c = COL_JOURS_DEBUT; c <= derniereColonne; c++) cuisine.getColumn(c).width = 7;
+  // Largeurs calculées pour tenir sur 8,5 po en portrait avec 10 journées
+  // (30 petites colonnes) sans que l'impression devienne illisible : voir
+  // fitToWidth ci-dessous, qui ajuste l'échelle exacte au besoin.
+  cuisine.getColumn(1).width = 28;
+  cuisine.getColumn(2).width = 5.5;
+  for (let c = COL_JOURS_DEBUT; c <= derniereColonne; c++) cuisine.getColumn(c).width = 3.2;
 
-  // Filtre automatique sur la feuille cuisine elle-même — Christine
-  // regroupe ensuite par service de dîner (variable d'une école à l'autre)
-  // directement dans Excel avec la colonne Niveau.
-  cuisine.autoFilter = {
-    from: { row: 3, column: 1 },
-    to: { row: 3 + commandes.length + registreSeuls.length, column: derniereColonne },
+  cuisine.pageSetup = {
+    paperSize: 1 as ExcelJS.PaperSize, // Letter, 8,5 × 11 po
+    orientation: 'portrait',
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0, // autant de pages que nécessaire en hauteur
+    horizontalCentered: true,
+    margins: { left: 0.4, right: 0.4, top: 0.55, bottom: 0.6, header: 0.25, footer: 0.3 },
+    printTitlesRow: '2:3', // entêtes des jours répétés sur chaque page
   };
+  cuisine.headerFooter.oddFooter = '&L&8&A&C&8Page &P de &N&R&8Imprimé le &D';
+
+  // Sans service configuré, le filtre automatique reste (comme avant) ; avec
+  // des sections, il mélangerait titres et sous-totaux — le regroupement
+  // remplace ce que Christine faisait à la main avec le filtre.
+  if (!regroupe) {
+    cuisine.autoFilter = {
+      from: { row: 3, column: 1 },
+      to: { row: rEtiquetteAjout - 1, column: derniereColonne },
+    };
+  }
 
   // ------------------------------------------------------------------
   // Feuille 2 — DÉTAIL (ce qu'elle vérifiait à côté)
@@ -365,6 +481,16 @@ export async function construireClasseurCommandes(
   [22, 16, 14, 26].forEach((w, i) => (detail.getColumn(i + 1).width = w));
   for (let i = 0; i < journees.length; i++) detail.getColumn(5 + i).width = 8;
   [18, 7, 11, 22, 15, 30].forEach((w, i) => (detail.getColumn(5 + journees.length + i).width = w));
+
+  detail.pageSetup = {
+    paperSize: 1 as ExcelJS.PaperSize,
+    orientation: 'landscape',
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margins: { left: 0.4, right: 0.4, top: 0.55, bottom: 0.6, header: 0.25, footer: 0.3 },
+    printTitlesRow: '2:2',
+  };
 
   const buffer = (await classeur.xlsx.writeBuffer()) as ArrayBuffer;
   const nomFichier = `${menu.institution.nom} - ${menu.thematiqueRef?.nom ?? 'Menu'} - ${fmtFichier(menu.periodeDebut)}.xlsx`

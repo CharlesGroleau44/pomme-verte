@@ -45,9 +45,22 @@ function normaliserNiveau(brut: string): string {
   return nettoye;
 }
 
-type ColMap = { combine: number | null; nom: number | null; prenom: number | null; niveau: number | null };
+// « Nicole et Rachel » → « 0.N.R » ; « Katia » → « 0.K ». Les initiales
+// restent dans l'ordre où l'école écrit les titulaires (Christine, 26 octobre
+// 2026 : « Mmes Laurie et Kimberly » deviennent 0.L.K). Préscolaire seulement.
+export function groupeDepuisTitulaire(titulaire: string): string | null {
+  const prenoms = titulaire
+    .replace(/\b(mmes?|mme|mesdames|madame|m\.)\s+/gi, '')
+    .split(/\s+(?:et|&)\s+|\s*[,/]\s*/i)
+    .map((p) => retirerAccents(p).trim())
+    .filter(Boolean);
+  if (prenoms.length === 0) return null;
+  return `0.${prenoms.map((p) => p[0].toUpperCase()).join('.')}`;
+}
 
-function classifierEntete(h: string): 'combine' | 'niveau' | 'ignore' | 'prenom' | 'nom' {
+type ColMap = { combine: number | null; nom: number | null; prenom: number | null; niveau: number | null; titulaire: number | null };
+
+function classifierEntete(h: string): 'combine' | 'niveau' | 'ignore' | 'prenom' | 'nom' | 'titulaire' {
   const cle = normaliserTexte(h);
   if (!cle) return 'ignore';
   if (/^eleves?$/.test(cle)) return 'combine';
@@ -56,18 +69,19 @@ function classifierEntete(h: string): 'combine' | 'niveau' | 'ignore' | 'prenom'
   const hasNom = /nom/.test(sansPrenom);
   if (hasNom && hasPrenom) return 'combine';
   if (/(degre|niveau|classe|annee|groupe)/.test(cle)) return 'niveau';
-  if (/(professeur|enseignant|titulaire)/.test(cle)) return 'ignore';
+  if (/(professeur|enseignant|titulaire)/.test(cle)) return 'titulaire';
   if (hasPrenom) return 'prenom';
   if (hasNom) return 'nom';
   return 'ignore';
 }
 
 function detecterColonnes(entetes: string[]): ColMap | null {
-  const map: ColMap = { combine: null, nom: null, prenom: null, niveau: null };
+  const map: ColMap = { combine: null, nom: null, prenom: null, niveau: null, titulaire: null };
   entetes.forEach((h, i) => {
     const type = classifierEntete(h);
     if (type === 'combine' && map.combine === null) map.combine = i;
     else if (type === 'niveau' && map.niveau === null) map.niveau = i;
+    else if (type === 'titulaire' && map.titulaire === null) map.titulaire = i;
     else if (type === 'prenom' && map.prenom === null) map.prenom = i;
     else if (type === 'nom' && map.nom === null) map.nom = i;
   });
@@ -80,7 +94,7 @@ function celluleEnTexte(row: ExcelJS.Row, colonne0Indexe: number): string {
   return String(row.getCell(colonne0Indexe + 1).value ?? '').trim();
 }
 
-export type EleveImporte = { nom: string; prenom: string; niveau: string };
+export type EleveImporte = { nom: string; prenom: string; niveau: string; groupe?: string | null };
 
 /**
  * Lit un classeur Excel — n'importe lequel des gabarits reçus jusqu'ici
@@ -128,7 +142,10 @@ export async function parserFichierEleves(buffer: Buffer): Promise<EleveImporte[
       // 2026) — évite qu'une même personne épelée différemment d'un import
       // à l'autre (ou entre le registre et le compte parent) soit traitée
       // comme deux élèves distincts.
-      eleves.push({ nom: retirerAccents(nom), prenom: retirerAccents(prenom), niveau: normaliserNiveau(niveauBrut) });
+      const niveau = normaliserNiveau(niveauBrut);
+      const titulaire = map.titulaire !== null ? celluleEnTexte(row, map.titulaire) : '';
+      const groupe = niveau === 'Préscolaire' && titulaire ? groupeDepuisTitulaire(titulaire) : null;
+      eleves.push({ nom: retirerAccents(nom), prenom: retirerAccents(prenom), niveau, groupe });
     });
 
     if (eleves.length > meilleur.length) meilleur = eleves;
@@ -172,8 +189,8 @@ export async function remplacerRegistre(institutionId: string, eleves: EleveImpo
     ...eleves.map((e) => {
       const trouve = existantsParCle.get(cleEleve(e.nom, e.prenom, e.niveau));
       return trouve
-        ? prisma.eleveRegistre.update({ where: { id: trouve.id }, data: { niveau: e.niveau } })
-        : prisma.eleveRegistre.create({ data: { institutionId, nom: e.nom, prenom: e.prenom, niveau: e.niveau } });
+        ? prisma.eleveRegistre.update({ where: { id: trouve.id }, data: { niveau: e.niveau, groupe: e.groupe ?? null } })
+        : prisma.eleveRegistre.create({ data: { institutionId, nom: e.nom, prenom: e.prenom, niveau: e.niveau, groupe: e.groupe ?? null } });
     }),
     prisma.eleveRegistre.deleteMany({ where: { id: { in: aRetirer } } }),
   ]);
