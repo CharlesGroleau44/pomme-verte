@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { absenceEncoreAccordable, jourDuMoisUTC } from '@/lib/menu-logic';
 import { useParentCompte } from '../ContexteParent';
-import { resoudreLigne, totalCommande, LABEL_TAILLE, LABEL_PAIEMENT } from '../utils';
+import { resoudreLigne, totalCommande, soldeDuCommande, LABEL_TAILLE, LABEL_PAIEMENT } from '../utils';
 import AlerteVersement from '../AlerteVersement';
 
 // « Entente annuelle » / « Solde prépayé » exclus — voir la même note dans
@@ -63,8 +63,8 @@ export default function PaiementPage() {
     recharger();
   };
 
-  const totalNonPaye = commandes.filter((c) => !c.paye).reduce((s, c) => s + totalCommande(c), 0);
-  const totalPaye = commandes.filter((c) => c.paye).reduce((s, c) => s + totalCommande(c), 0);
+  const totalNonPaye = commandes.reduce((s, c) => s + soldeDuCommande(c), 0);
+  const totalPaye = commandes.reduce((s, c) => s + (totalCommande(c) - soldeDuCommande(c)), 0);
 
   // Entente annuelle par enfant depuis le 17 août 2026 (voir lib/entente.ts)
   // — chacun a son propre forfait/solde, affiché dans sa propre carte.
@@ -205,7 +205,7 @@ export default function PaiementPage() {
                   <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
                     <span className="font-bold text-sm text-pomme-leaf-deep">{totalCommande(c).toFixed(2)}$</span>
                     <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${c.paye ? 'bg-status-good/10 text-status-good' : 'bg-status-warning/10 text-status-warning'}`}>
-                      {c.paye ? `PAYÉ${c.payeLe ? ' · ' + new Date(c.payeLe).toLocaleDateString('fr-CA') : ''}` : 'NON PAYÉ'}
+                      {c.paye ? `PAYÉ${c.payeLe ? ' · ' + new Date(c.payeLe).toLocaleDateString('fr-CA') : ''}` : soldeDuCommande(c) < totalCommande(c) ? `SOLDE DÛ ${soldeDuCommande(c).toFixed(2)}$ (déjà payé ${(totalCommande(c) - soldeDuCommande(c)).toFixed(2)}$)` : 'NON PAYÉ'}
                     </span>
                   </div>
                 </button>

@@ -31,6 +31,7 @@ import ExcelJS from 'exceljs';
 import { prisma } from './prisma';
 import { jourDuMoisUTC, prixLigne, selectionVersTexte } from './menu-logic';
 import { cleEleve } from './normalisation';
+import { soldeDu } from './paiement';
 
 const LABEL_PAIEMENT: Record<string, string> = {
   ARGENT: 'Argent comptant',
@@ -231,11 +232,11 @@ export async function construireClasseurCommandes(
     if (l.niveau === 'Préscolaire') {
       return l.groupe
         ? { cle: `g:${l.groupe}`, titre: `Préscolaire ${l.groupe}`, ordre: 100 }
-        : { cle: 'g:?', titre: 'Préscolaire — groupe à préciser', ordre: 200 };
+        : { cle: 'g:?', titre: registre.some((e) => e.groupe) ? 'Préscolaire — groupe à préciser' : 'Préscolaire', ordre: 200 };
     }
     const i = services.findIndex((s) => s.includes(l.niveau));
     return i >= 0
-      ? { cle: `s:${i}`, titre: `Niveaux ${services[i].join('-')}`, ordre: i }
+      ? { cle: `s:${i}`, titre: services[i].length === 1 ? `Niveau ${services[i][0]}` : `Niveaux ${services[i].join('-')}`, ordre: i }
       : { cle: 'autres', titre: 'Autres niveaux', ordre: 300 };
   };
   for (const l of lignesEleves) {
@@ -262,9 +263,15 @@ export async function construireClasseurCommandes(
   let r = 4;
   let premiereDataRow = r;
   const sousTotaux: number[] = [];
+  // Les totaux sont aussi ÉCRITS comme valeurs (result) dans les formules :
+  // une visionneuse qui ne recalcule pas (aperçu de courriel, Numbers…)
+  // affichait des totaux vides (Christine, Sacré-Cœur, 30 octobre 2026).
+  const nbCases = journees.length * COLS_PAR_JOUR;
+  const compteTotal: number[] = new Array(nbCases).fill(0);
   let premierBlocPrescolaire = true;
 
   sectionsTriees.forEach((section, iSection) => {
+    const compteSection: number[] = new Array(nbCases).fill(0);
     if (section.titre) {
       // Un nouveau service = une nouvelle page (le comptoir sert un service
       // à la fois) ; les groupes du préscolaire, courts, s'enchaînent après
@@ -312,10 +319,12 @@ export async function construireClasseurCommandes(
         const c = COL_JOURS_DEBUT + iJour * COLS_PAR_JOUR + Math.max(0, iSel);
         const cel = cuisine.getCell(r, c);
         cel.value = 1;
+        compteSection[c - COL_JOURS_DEBUT]++;
         cel.alignment = { horizontal: 'center' };
         if (ligne.taille === 'DEUXIEME_SERVICE') {
           const p = cuisine.getCell(r, COL_JOURS_DEBUT + iJour * COLS_PAR_JOUR + 2);
           p.value = 'P';
+          compteSection[iJour * COLS_PAR_JOUR + 2]++;
           p.alignment = { horizontal: 'center' };
           p.font = { bold: true };
         }
@@ -335,13 +344,16 @@ export async function construireClasseurCommandes(
           const cel = cuisine.getCell(rSous, c);
           // Section vide : la plage serait inversée, on écrit simplement 0.
           cel.value = section.eleves.length
-            ? { formula: `COUNTA(${lettre}${debutSection}:${lettre}${rSous - 1})`, result: undefined }
+            ? { formula: `COUNTA(${lettre}${debutSection}:${lettre}${rSous - 1})`, result: compteSection[i * COLS_PAR_JOUR + k] }
             : 0;
           cel.font = { bold: true, size: 9 };
           cel.alignment = { horizontal: 'center' };
         }
       }
       sousTotaux.push(rSous);
+    }
+    compteSection.forEach((n, idx) => { compteTotal[idx] += n; });
+    if (regroupe) {
       r++;
     }
   });
@@ -382,7 +394,7 @@ export async function construireClasseurCommandes(
       const formule = regroupe
         ? `${sousTotaux.map((s) => `${lettre}${s}`).join('+')}+${ajouts}`
         : `COUNTA(${lettre}${premiereDataRow}:${lettre}${rDerniereLigneVierge})`;
-      cel.value = { formula: formule, result: undefined };
+      cel.value = { formula: formule, result: compteTotal[i * COLS_PAR_JOUR + k] };
       cel.font = { bold: true, size: 9 };
       cel.alignment = { horizontal: 'center' };
       cel.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: VERT_PALE } };
@@ -462,7 +474,8 @@ export async function construireClasseurCommandes(
 
     const c0 = 5 + journees.length;
     detail.getCell(r, c0).value = LABEL_PAIEMENT[cmd.modePaiement] ?? cmd.modePaiement;
-    detail.getCell(r, c0 + 1).value = cmd.paye ? 'Oui' : 'Non';
+    const reste = soldeDu(cmd, total);
+    detail.getCell(r, c0 + 1).value = cmd.paye ? 'Oui' : reste < total ? `Reste ${reste.toFixed(2)} $` : 'Non';
     const cTotal = detail.getCell(r, c0 + 2);
     cTotal.value = total;
     cTotal.numFmt = '#,##0.00 $';

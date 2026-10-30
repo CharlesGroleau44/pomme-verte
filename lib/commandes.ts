@@ -3,7 +3,8 @@
 // /api/parent/commandes), réservée aux parents connectés — voir
 // FormulaireCommande.tsx.
 import { prisma } from '@/lib/prisma';
-import { estActivementPublie, estJourAVenirOuAujourdhui, estMenuVisible, prixSelonTaille, selectionVersTexte } from '@/lib/menu-logic';
+import { estActivementPublie, estJourAVenirOuAujourdhui, estMenuVisible, prixLigne, prixSelonTaille, selectionVersTexte } from '@/lib/menu-logic';
+import { enNombre } from '@/lib/paiement';
 
 // FONDATION n'est valide que pour les institutions qui l'offrent — voir la
 // vérification institution.offreFondation dans chargerEtValiderMenu.
@@ -171,14 +172,25 @@ export async function enregistrerCommandeTardive(params: {
   const { compteParentId, enfantId, menuId, modePaiement, journeesChoisies, prixUnitaire } = params;
   const paiementDejaRecu = modePaiement === 'PREPAYE' || modePaiement === 'SOLDE_PREPAYE';
   return prisma.$transaction(async (tx) => {
-    const existante = await tx.commande.findUnique({ where: { enfantId_menuId: { enfantId, menuId } } });
+    const existante = await tx.commande.findUnique({
+      where: { enfantId_menuId: { enfantId, menuId } },
+      include: { lignes: { include: { selection: { include: { repas: true } } } } },
+    });
+    // Commande déjà payée, que l'ajout tardif rend incomplète : on garde en
+    // mémoire ce qui a été reçu (le total AVANT l'ajout) pour que le solde dû
+    // soit seulement le nouveau repas — voir lib/paiement.ts.
+    const dejaRecu = existante?.paye && !paiementDejaRecu
+      ? (existante.montantPaye !== null
+          ? enNombre(existante.montantPaye)
+          : existante.lignes.reduce((s, l) => s + prixLigne(l, selectionVersTexte(l.selection)), 0))
+      : null;
     const c = existante
       ? await tx.commande.update({
           where: { id: existante.id },
           data: {
             ...(paiementDejaRecu
               ? { modePaiement: modePaiement as never, paye: true, payeLe: new Date() }
-              : { paye: false, payeLe: null }),
+              : { paye: false, payeLe: null, ...(dejaRecu !== null ? { montantPaye: dejaRecu } : {}) }),
             avisEcoleEnvoyeLe: null,
           },
         })

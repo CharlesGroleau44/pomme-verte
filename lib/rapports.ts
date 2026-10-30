@@ -44,6 +44,7 @@ export type LigneResolue = {
   institutionNom: string;
   modePaiement: string;
   paye: boolean;
+  montantPaye: number;
   commandeId: string;
   enfantId: string;
   enfantNom: string;
@@ -99,6 +100,7 @@ export async function chargerLignesResolues(filtresBruts: FiltresRapport): Promi
     institutionNom: l.commande.enfant.institution.nom,
     modePaiement: l.commande.modePaiement,
     paye: l.commande.paye,
+    montantPaye: l.commande.montantPaye === null ? 0 : parseFloat(l.commande.montantPaye.toString()),
     commandeId: l.commandeId,
     enfantId: l.commande.enfantId,
     enfantNom: `${l.commande.enfant.prenom} ${l.commande.enfant.nomDeFamille}`,
@@ -106,10 +108,25 @@ export async function chargerLignesResolues(filtresBruts: FiltresRapport): Promi
   }));
 }
 
+/**
+ * Solde dû par commande : total des lignes (de la fenêtre du rapport) moins ce
+ * qui a déjà été reçu (Commande.montantPaye), jamais négatif — voir
+ * lib/paiement.ts. Une commande payée ne doit rien.
+ */
+function dusParCommande(lignes: LigneResolue[]) {
+  const parCommande = new Map<string, { institutionId: string; total: number; recu: number; paye: boolean }>();
+  for (const l of lignes) {
+    const e = parCommande.get(l.commandeId) ?? { institutionId: l.institutionId, total: 0, recu: l.montantPaye, paye: l.paye };
+    e.total += l.prix;
+    parCommande.set(l.commandeId, e);
+  }
+  return new Map([...parCommande].map(([id, e]) => [id, { institutionId: e.institutionId, du: e.paye ? 0 : Math.max(0, Math.round((e.total - e.recu) * 100) / 100) }]));
+}
+
 export function totauxLignes(lignes: LigneResolue[]) {
   const commandesDistinctes = new Set(lignes.map((l) => l.commandeId)).size;
   const revenu = lignes.reduce((s, l) => s + l.prix, 0);
-  const nonPaye = lignes.filter((l) => !l.paye).reduce((s, l) => s + l.prix, 0);
+  const nonPaye = [...dusParCommande(lignes).values()].reduce((s, d) => s + d.du, 0);
   return { repas: lignes.length, commandes: commandesDistinctes, revenu, nonPaye };
 }
 
@@ -131,8 +148,11 @@ export function ventilationParInstitution(lignes: LigneResolue[]) {
     e.commandes.add(l.commandeId);
     e.repas += 1;
     e.revenu += l.prix;
-    if (!l.paye) e.nonPaye += l.prix;
     parEcole.set(l.institutionId, e);
+  }
+  for (const d of dusParCommande(lignes).values()) {
+    const e = parEcole.get(d.institutionId);
+    if (e) e.nonPaye += d.du;
   }
   return Array.from(parEcole.values())
     .map((e) => ({ institutionId: e.institutionId, institutionNom: e.institutionNom, commandes: e.commandes.size, repas: e.repas, revenu: e.revenu, nonPaye: e.nonPaye }))

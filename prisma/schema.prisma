@@ -501,6 +501,13 @@ model Commande {
   modePaiement   ModePaiement
   paye           Boolean      @default(false)
   payeLe         DateTime?
+  // Montant déjà reçu quand Christine coche « payé » (= total de la commande
+  // à ce moment-là). Sert au solde dû d'une commande payée puis complétée par
+  // une commande tardive : 8 $ reçus lundi + 8 $ ajoutés mercredi = 8 $ dus,
+  // pas 16 $ (Christine, courriel du 27 octobre 2026). Nul = rien d'encaissé
+  // de façon traçable (commandes d'avant ce champ comprises) : si paye est
+  // vrai, tout est réglé ; sinon, tout le total est dû.
+  montantPaye    Decimal?     @db.Decimal(8, 2)
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @default(now()) @updatedAt
   // Digest quotidien à l'école (voir /api/taches/digest-commandes) —

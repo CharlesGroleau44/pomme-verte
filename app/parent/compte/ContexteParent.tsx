@@ -84,6 +84,7 @@ export type Commande = {
   modePaiement: string;
   paye: boolean;
   payeLe: string | null;
+  montantPaye: string | null;
   enfant: { id: string; prenom: string; nomDeFamille: string };
   menu: { id: string; thematiqueRef: { nom: string } | null; institution: Institution };
   lignes: Ligne[];

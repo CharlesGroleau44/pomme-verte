@@ -9,6 +9,7 @@ import { useEffect, useState } from 'react';
 import StatTile from '../dashboard/StatTile';
 import { jourDuMoisUTC } from '@/lib/menu-logic';
 import { CHAMP, CHAMP_NU } from '@/lib/ui';
+import { soldeDu, etatPaiement } from '@/lib/paiement';
 
 type Ligne = { id: string; taille: string; tardive: boolean; nomResolu: string; prixResolu: string; journee: { id: string; date: string; jourSemaine: string } };
 type Commande = {
@@ -16,6 +17,7 @@ type Commande = {
   createdAt: string;
   modePaiement: string;
   paye: boolean;
+  montantPaye: string | null;
   compteParent: { nom: string; courriel: string; telephone: string | null };
   enfant: { prenom: string; nomDeFamille: string; niveau: string; intolerances: string[]; autreIntolerance: string | null; institution: { id: string; nom: string } };
   menu: { id: string; thematiqueRef: { nom: string } | null };
@@ -41,7 +43,7 @@ function exporterCsv(commandes: Commande[]) {
     const allergies = [...c.enfant.intolerances, c.enfant.autreIntolerance].filter(Boolean).join(', ');
     return [
       c.enfant.institution.nom, c.menu.thematiqueRef?.nom || 'Menu', `${c.enfant.prenom} ${c.enfant.nomDeFamille}`, c.enfant.niveau, allergies,
-      c.compteParent.nom, c.compteParent.courriel, c.compteParent.telephone || '', LABEL_PAIEMENT[c.modePaiement], c.paye ? 'Oui' : 'Non',
+      c.compteParent.nom, c.compteParent.courriel, c.compteParent.telephone || '', LABEL_PAIEMENT[c.modePaiement], c.paye ? 'Oui' : soldeDu(c, total) < total ? `Partiel (reste ${soldeDu(c, total).toFixed(2)})` : 'Non',
       total.toFixed(2), detail,
     ];
   });
@@ -67,6 +69,7 @@ export default function CommandesPage() {
   const [modeSelection, setModeSelection] = useState(false);
   const [selectionnees, setSelectionnees] = useState<Set<string>>(new Set());
   const [modaleAvisOuverte, setModaleAvisOuverte] = useState(false);
+  const [dateTardives, setDateTardives] = useState(() => new Date().toLocaleDateString('en-CA', { timeZone: 'America/Montreal' }));
 
   const charger = () => {
     fetch('/api/commandes').then((r) => r.json()).then((d) => { setCommandes(d); setCharge(true); });
@@ -98,7 +101,7 @@ export default function CommandesPage() {
 
   const totalRepas = commandes.reduce((n, c) => n + c.lignes.length, 0);
   const revenuEstime = commandes.reduce((n, c) => n + c.lignes.reduce((s, l) => s + parseFloat(l.prixResolu), 0), 0);
-  const nonPaye = commandes.filter((c) => !c.paye).reduce((n, c) => n + c.lignes.reduce((s, l) => s + parseFloat(l.prixResolu), 0), 0);
+  const nonPaye = commandes.reduce((n, c) => n + soldeDu(c, c.lignes.reduce((s, l) => s + parseFloat(l.prixResolu), 0)), 0);
 
   const institutionsUtilisees = Array.from(new Map(commandes.map((c) => [c.enfant.institution.id, c.enfant.institution])).values());
   const menusUtilises = Array.from(
@@ -174,6 +177,27 @@ export default function CommandesPage() {
           <StatTile label="Non payé" valeur={`${nonPaye.toFixed(2)}$`} />
         </div>
       )}
+
+      {/* Fiche du matin : toutes les commandes tardives d'une journée, une page
+          par école, prête à imprimer (Christine, 27 octobre 2026). */}
+      <div className="flex flex-wrap items-center gap-2 rounded-2xl bg-pomme-soft px-4 py-3">
+        <span className="text-sm font-semibold text-pomme-leaf-deep">Commandes tardives du jour</span>
+        <input
+          type="date"
+          value={dateTardives}
+          onChange={(e) => setDateTardives(e.target.value)}
+          className={CHAMP_NU + ' w-44'}
+          aria-label="Date des repas tardifs"
+        />
+        <a
+          href={`/api/commandes/tardives-pdf?date=${dateTardives}`}
+          target="_blank"
+          rel="noreferrer"
+          className="press inline-flex min-h-[44px] items-center rounded-xl bg-pomme-apple-deep px-4 text-sm font-semibold text-white shadow-soft transition-all hover:bg-pomme-leaf hover:shadow-lifted"
+        >
+          Fiche à imprimer ↗
+        </a>
+      </div>
 
       <div className="flex flex-wrap items-center gap-2">
         {institutionsUtilisees.length > 1 && (
@@ -270,12 +294,21 @@ export default function CommandesPage() {
                   </button>
                   <div className="text-right shrink-0 flex flex-col items-end gap-1.5">
                     <div className="font-bold text-sm text-pomme-leaf-deep">{total.toFixed(2)}$</div>
-                    <button
-                      onClick={() => basculerPaye(c)}
-                      className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors ${c.paye ? 'bg-status-good text-white' : 'bg-status-critical text-white'}`}
-                    >
-                      {c.paye ? 'PAYÉ' : 'NON PAYÉ'}
-                    </button>
+                    {(() => {
+                      // Payé / partiel (une partie déjà reçue, le reste dû après
+                      // un ajout tardif) / non payé — voir lib/paiement.ts.
+                      const etat = etatPaiement(c, total);
+                      const reste = soldeDu(c, total);
+                      return (
+                        <button
+                          onClick={() => basculerPaye(c)}
+                          title={etat === 'paye' ? 'Cliquer pour remettre non payé' : 'Cliquer pour marquer payé (tout le total reçu)'}
+                          className={`rounded-lg px-2.5 py-1 text-xs font-bold transition-colors text-white ${etat === 'paye' ? 'bg-status-good' : etat === 'partiel' ? 'bg-status-warning' : 'bg-status-critical'}`}
+                        >
+                          {etat === 'paye' ? 'PAYÉ' : etat === 'partiel' ? `RESTE ${reste.toFixed(2)}$` : 'NON PAYÉ'}
+                        </button>
+                      );
+                    })()}
                     <button onClick={() => setOuverte(estOuverte ? null : c.id)} className="text-xs font-medium text-pomme-apple-deep">
                       {estOuverte ? 'Fermer' : 'Détail'}
                     </button>

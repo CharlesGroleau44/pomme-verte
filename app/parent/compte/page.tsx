@@ -4,7 +4,7 @@ import Link from 'next/link';
 import StatTile from '@/app/admin/dashboard/StatTile';
 import { jourDuMoisUTC } from '@/lib/menu-logic';
 import { useParentCompte } from './ContexteParent';
-import { totalCommande, LABEL_PAIEMENT } from './utils';
+import { totalCommande, soldeDuCommande, LABEL_PAIEMENT } from './utils';
 import { IconeProfil, IconeEnfants, IconePaiement } from '../Icones';
 import AlerteVersement from './AlerteVersement';
 
@@ -16,7 +16,7 @@ export default function TableauDeBordPage() {
     const d = new Date(c.createdAt);
     return d.getMonth() === maintenant.getMonth() && d.getFullYear() === maintenant.getFullYear();
   });
-  const nonPaye = commandes.filter((c) => !c.paye).reduce((s, c) => s + totalCommande(c), 0);
+  const nonPaye = commandes.reduce((s, c) => s + soldeDuCommande(c), 0);
   const repasCommandes = commandes.reduce((s, c) => s + c.lignes.length, 0);
   const recentes = [...commandes].slice(0, 4);
 
@@ -124,7 +124,7 @@ export default function TableauDeBordPage() {
               <div className="text-right shrink-0 flex flex-col items-end gap-1">
                 <span className="font-bold text-sm text-pomme-leaf-deep">{totalCommande(c).toFixed(2)}$</span>
                 <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full ${c.paye ? 'bg-status-good/10 text-status-good' : 'bg-status-warning/10 text-status-warning'}`}>
-                  {c.paye ? 'PAYÉ' : 'NON PAYÉ'}
+                  {c.paye ? 'PAYÉ' : soldeDuCommande(c) < totalCommande(c) ? `SOLDE DÛ ${soldeDuCommande(c).toFixed(2)}$` : 'NON PAYÉ'}
                 </span>
               </div>
             </Link>

@@ -5,6 +5,7 @@
 // middleware admin par défaut.
 import { NextRequest, NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { prixLigne, selectionVersTexte } from '@/lib/menu-logic';
 
 export const dynamic = 'force-dynamic';
 
@@ -14,9 +15,21 @@ export async function PATCH(req: NextRequest, { params }: { params: { id: string
     return NextResponse.json({ error: 'paye (booléen) est requis.' }, { status: 400 });
   }
 
+  // Cocher « payé » = tout le total actuel est reçu : on le mémorise
+  // (montantPaye) pour que de futurs ajouts tardifs ne fassent redevenir dû
+  // que le nouveau repas, pas la commande entière — voir lib/paiement.ts.
+  let montantPaye: number | null = null;
+  if (body.paye) {
+    const lignes = await prisma.ligneCommande.findMany({
+      where: { commandeId: params.id },
+      include: { selection: { include: { repas: true } } },
+    });
+    montantPaye = lignes.reduce((s, l) => s + prixLigne(l, selectionVersTexte(l.selection)), 0);
+  }
+
   const commande = await prisma.commande.update({
     where: { id: params.id },
-    data: { paye: body.paye, payeLe: body.paye ? new Date() : null },
+    data: { paye: body.paye, payeLe: body.paye ? new Date() : null, montantPaye },
   });
 
   return NextResponse.json(commande);

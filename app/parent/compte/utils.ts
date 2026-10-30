@@ -5,6 +5,7 @@
 // (la même logique que le montage de menu) plutôt que de la dupliquer.
 import { resoudreSelection, prixLigne } from '@/lib/menu-logic';
 import type { Commande, Ligne } from './ContexteParent';
+import { soldeDu } from '@/lib/paiement';
 
 export function resoudreLigne(ligne: Ligne) {
   const r = resoudreSelection(ligne.selection);
@@ -13,6 +14,11 @@ export function resoudreLigne(ligne: Ligne) {
 
 export function totalCommande(commande: Commande): number {
   return commande.lignes.reduce((s, l) => s + resoudreLigne(l).prix, 0);
+}
+
+/** Ce qui reste à payer sur la commande (0 si payée) — voir lib/paiement.ts. */
+export function soldeDuCommande(commande: Commande): number {
+  return soldeDu(commande, totalCommande(commande));
 }
 
 export const LABEL_TAILLE: Record<string, string> = {
