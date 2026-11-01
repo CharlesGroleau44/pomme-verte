@@ -229,14 +229,28 @@ export async function construireClasseurCommandes(
   const sections = new Map<string, Section>();
   const classer = (l: LigneEleve): Omit<Section, 'eleves'> => {
     if (!regroupe) return { cle: 'tous', titre: null, ordre: 0 };
-    if (l.niveau === 'Préscolaire') {
+    // Une école qui met « Préscolaire » dans ses services (Notre-Dame-de-Liesse :
+    // maternelle seule, puis 1-3-5, puis 2-4-6 — Christine, 30 octobre 2026) le
+    // range à l'endroit voulu ; sinon, le préscolaire vient après les services,
+    // par groupe-classe (Plein Soleil).
+    const iPre = l.niveau === 'Préscolaire' ? services.findIndex((s) => s.includes('Préscolaire')) : -1;
+    if (l.niveau === 'Préscolaire' && iPre < 0) {
       return l.groupe
         ? { cle: `g:${l.groupe}`, titre: `Préscolaire ${l.groupe}`, ordre: 100 }
         : { cle: 'g:?', titre: registre.some((e) => e.groupe) ? 'Préscolaire — groupe à préciser' : 'Préscolaire', ordre: 200 };
     }
-    const i = services.findIndex((s) => s.includes(l.niveau));
+    let i = iPre >= 0 ? iPre : services.findIndex((s) => s.includes(l.niveau));
+    if (i < 0) {
+      // Classe combinée (« 2e et 3e année », Dominique-Savio) : elle va au
+      // service qui contient TOUS ses degrés ; si ses degrés sont répartis
+      // sur deux services, elle reste dans « Autres niveaux ».
+      // Seulement si le libellé contient des lettres : un code de groupe à
+      // trois chiffres (« 123 ») n'est pas une classe combinée.
+      const degres = /[a-zé]/i.test(l.niveau) ? (l.niveau.match(/\d/g) ?? []) : [];
+      if (degres.length > 0) i = services.findIndex((s) => degres.every((d) => s.includes(d)));
+    }
     return i >= 0
-      ? { cle: `s:${i}`, titre: services[i].length === 1 ? `Niveau ${services[i][0]}` : `Niveaux ${services[i].join('-')}`, ordre: i }
+      ? { cle: `s:${i}`, titre: services[i].length === 1 ? (services[i][0] === 'Préscolaire' ? 'Maternelle' : `Niveau ${services[i][0]}`) : `Niveaux ${services[i].join('-')}`, ordre: i }
       : { cle: 'autres', titre: 'Autres niveaux', ordre: 300 };
   };
   for (const l of lignesEleves) {
@@ -304,7 +318,7 @@ export async function construireClasseurCommandes(
         : nomComplet;
       if (!l.allergies) cuisine.getCell(r, 1).font = { size: 10 };
       const celN = cuisine.getCell(r, 2);
-      celN.value = l.niveau === 'Préscolaire' ? (l.groupe ?? '0') : l.niveau;
+      celN.value = l.niveau === 'Préscolaire' ? (l.groupe ?? '0') : niveauAbrege(l.niveau);
       celN.alignment = { horizontal: 'center' };
       celN.font = { size: 9 };
       bordureLigne(r, l.fond);
@@ -411,9 +425,13 @@ export async function construireClasseurCommandes(
   cuisine.pageSetup = {
     paperSize: 1 as ExcelJS.PaperSize, // Letter, 8,5 × 11 po
     orientation: 'portrait',
-    fitToPage: true,
-    fitToWidth: 1,
-    fitToHeight: 0, // autant de pages que nécessaire en hauteur
+    // Échelle FIXE et non « ajuster à 1 page de large » : Excel IGNORE les
+    // sauts de page manuels quand l'ajustement est actif — les sauts de page
+    // entre les degrés de Sacré-Cœur manquaient (Christine, 30 octobre 2026).
+    // 66 % : 10 journées × 3 colonnes + nom + N font ≈ 11,1 po à 100 %, pour
+    // 7,7 po imprimables (marges de 0,4 po).
+    fitToPage: false,
+    scale: 66,
     horizontalCentered: true,
     margins: { left: 0.4, right: 0.4, top: 0.55, bottom: 0.6, header: 0.25, footer: 0.3 },
     printTitlesRow: '2:3', // entêtes des jours répétés sur chaque page
@@ -509,6 +527,13 @@ export async function construireClasseurCommandes(
   const nomFichier = `${menu.institution.nom} - ${menu.thematiqueRef?.nom ?? 'Menu'} - ${fmtFichier(menu.periodeDebut)}.xlsx`
     .replace(/[/\\?%*:|"<>]/g, '-');
   return { buffer, nomFichier };
+}
+
+// « 2e et 3e année » → « 2-3 » : la colonne N ne fait que 5,5 caractères.
+function niveauAbrege(niveau: string): string {
+  if (/^\d$/.test(niveau) || niveau.length <= 5) return niveau;
+  const degres = niveau.match(/\d/g);
+  return degres && degres.length > 1 ? degres.join('-') : niveau;
 }
 
 function fmt(d: Date): string {
