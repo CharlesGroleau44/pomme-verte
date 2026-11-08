@@ -8,6 +8,7 @@ import { prisma } from '@/lib/prisma';
 import { aujourdhuiQuebec, prixLigne, selectionVersTexte } from '@/lib/menu-logic';
 import { soldeDu } from '@/lib/paiement';
 import { cleEleve } from '@/lib/normalisation';
+import { texteAllergies } from '@/lib/allergies';
 import { chargerLogoTraiteur } from '@/lib/pdf/logoTraiteur';
 import { LABEL_PAIEMENT } from '@/lib/pdf/rapportStyles';
 import TardivesDocument, { type EcoleTardive } from '@/lib/pdf/TardivesDocument';
@@ -54,7 +55,7 @@ export async function GET(req: NextRequest) {
       nom: e.nomDeFamille,
       prenom: e.prenom,
       niveau: e.niveau === 'Préscolaire' ? (groupe ?? '0') : e.niveau,
-      allergies: [...e.intolerances, e.autreIntolerance].filter(Boolean).join(', '),
+      allergies: texteAllergies(e),
       parent: c.compteParent.nom,
       telephone: c.compteParent.telephone ?? '',
       paiement: LABEL_PAIEMENT[c.modePaiement] ?? c.modePaiement,

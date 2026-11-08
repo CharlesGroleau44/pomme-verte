@@ -29,6 +29,7 @@
 // Décision prise avec Charles le 12 août 2026.
 import ExcelJS from 'exceljs';
 import JSZip from 'jszip';
+import { texteAllergies } from './allergies';
 import { prisma } from './prisma';
 import { jourDuMoisUTC, prixLigne, selectionVersTexte } from './menu-logic';
 import { soldeDu } from './paiement';
@@ -180,13 +181,19 @@ export async function construireClasseurCommandes(
   // (doublons, N tapé à la main : Christine, 7 novembre 2026). Converti seulement
   // pour une école dont les services sont réglés : les autres codes (Brassard :
   // « 008 », « 751 ») gardent leur sens.
+  // Règle donnée par Christine pour Brassard-Saint-Patrice (9 novembre 2026) :
+  // « 00x » = maternelle (001, 002…), « 1xx » = 1re année (101, 102…), et ainsi de
+  // suite jusqu'à « 6xx » ; les codes « 700 et + » sont des élèves à besoins
+  // particuliers que les parents inscrivent à leur degré scolaire réel — d'où le
+  // groupe « Spécial », jumelé au site par le NOM (voir trouverRegistre).
   const normaliserCode = (niveau: string) => {
     if (menu.institution.servicesNiveaux.length === 0) return niveau;
-    const degre = niveau.match(/^([1-6])00$/);
+    if (/^00\d$/.test(niveau)) return 'Préscolaire';
+    const degre = niveau.match(/^([1-6])\d\d$/);
     if (degre) return degre[1];
-    return /^00\d$/.test(niveau) ? 'Préscolaire' : niveau;
+    return /^[7-9]\d\d$/.test(niveau) ? 'Spécial' : niveau;
   };
-  const registre = registreBrut.map((e) => ({ ...e, niveau: normaliserCode(e.niveau) }));
+  const registre = registreBrut.map((e) => ({ ...e, niveauBrut: e.niveau, niveau: normaliserCode(e.niveau) }));
   // Sans accents NI ponctuation : « L'Esperance » / « L’Esperance », « Charlie Eva »
   // / « Charlie-Eva » (le parent et l'école ne tapent pas pareil) doivent se joindre.
   const cleNom = (nom: string, prenom: string) =>
@@ -208,6 +215,8 @@ export async function construireClasseurCommandes(
     cmd: (typeof commandes)[number] | null;
     /** Élève d'une classe combinée (« 2e et 3e année ») : son degré réel est mis en évidence. */
     classeCombinee: boolean;
+    /** Niveau servant à ranger la ligne dans un service, si différent du niveau affiché (groupe Spécial). */
+    sectionNiveau?: string;
   };
   // Classe combinée (« 2e et 3e année », Dominique-Savio) : le registre garde
   // le libellé de la classe, mais le parent choisit le degré RÉEL de son enfant
@@ -216,9 +225,12 @@ export async function construireClasseurCommandes(
   // sur nom+prénom quand le niveau du registre est une classe combinée qui
   // contient le degré du site.
   const estClasseCombinee = (niveau: string) => /[a-zé]/i.test(niveau) && (niveau.match(/\d/g) ?? []).length > 1;
+  // « Libre » = le parent inscrit l'enfant à son degré réel, qui ne correspond pas
+  // au niveau du registre : classe combinée (2e et 3e) ou groupe Spécial (700 et +).
+  const estNiveauLibre = (niveau: string) => estClasseCombinee(niveau) || niveau === 'Spécial';
   const combineesParNom = new Map<string, (typeof registre)[number][]>();
   for (const e of registre) {
-    if (!estClasseCombinee(e.niveau)) continue;
+    if (!estNiveauLibre(e.niveau)) continue;
     const k = cleNom(e.nom, e.prenom);
     combineesParNom.set(k, [...(combineesParNom.get(k) ?? []), e]);
   }
@@ -233,10 +245,31 @@ export async function construireClasseurCommandes(
     for (const e of inscrits) degreReelParNom.set(cleNom(e.nomDeFamille, e.prenom), e.niveau);
   }
   const registreApparies = new Set<string>();
+  // Prénom partiel : « Martin » (parent) et « Martin Jean » (registre), même nom
+  // et même niveau (Tournier, St-Pie X). On ne jumelle que s'il y a UN SEUL
+  // candidat non jumelé — deux frères « Anne » / « Anne Marie » restent séparés.
+  const registreParNom = new Map<string, (typeof registre)[number][]>();
+  for (const e of registre) registreParNom.set(cleNom(e.nom, ''), [...(registreParNom.get(cleNom(e.nom, '')) ?? []), e]);
+  const mots = (prenom: string) => cleNom(prenom, '').split(' ').filter(Boolean);
+  const sousEnsemble = (a: string[], b: string[]) => a.length > 0 && a.every((m) => b.includes(m));
   const trouverRegistre = (nom: string, prenom: string, niveau: string) => {
     const exact = registreParCle.get(cleEleve(nom, prenom, niveau));
     if (exact) return exact;
-    return (combineesParNom.get(cleNom(nom, prenom)) ?? []).find((e) => (e.niveau.match(/\d/g) ?? ([] as string[])).includes(niveau));
+    const combinee = (combineesParNom.get(cleNom(nom, prenom)) ?? []).find(
+      (e) => e.niveau === 'Spécial' || (e.niveau.match(/\d/g) ?? ([] as string[])).includes(niveau),
+    );
+    if (combinee) return combinee;
+    const pm = mots(prenom);
+    const candidats = (registreParNom.get(cleNom(nom, '')) ?? []).filter(
+      (e) => e.niveau.trim().toLowerCase() === niveau.trim().toLowerCase() && !registreApparies.has(e.id) && (sousEnsemble(pm, mots(e.prenom)) || sousEnsemble(mots(e.prenom), pm)),
+    );
+    if (candidats.length === 1) return candidats[0];
+    // Même nom ET même prénom, mais le parent a choisi un autre degré que celui
+    // du registre : on jumelle seulement s'il n'y a qu'UN élève de ce nom au
+    // registre (deux homonymes de niveaux différents, comme Jacob Roux à
+    // Brassard, restent deux personnes).
+    const memeNom = (registreParNom.get(cleNom(nom, '')) ?? []).filter((e) => cleNom(e.nom, e.prenom) === cleNom(nom, prenom));
+    return memeNom.length === 1 && !registreApparies.has(memeNom[0].id) ? memeNom[0] : undefined;
   };
   const lignesEleves: LigneEleve[] = commandes.map((cmd) => {
     const reg = trouverRegistre(cmd.enfant.nomDeFamille, cmd.enfant.prenom, cmd.enfant.niveau);
@@ -246,29 +279,36 @@ export async function construireClasseurCommandes(
       prenom: cmd.enfant.prenom,
       niveau: cmd.enfant.niveau,
       groupe: reg?.groupe ?? null,
-      allergies: [...cmd.enfant.intolerances, cmd.enfant.autreIntolerance].filter(Boolean).join(', '),
+      allergies: texteAllergies(cmd.enfant),
       fond: reg ? (reg.ententeAnnuelle ? MAUVE_ENTENTE : reg.fondation ? ORANGE_FONDATION : null) : null,
       cmd,
-      classeCombinee: !!reg && estClasseCombinee(reg.niveau),
+      classeCombinee: !!reg && estNiveauLibre(reg.niveau),
+      sectionNiveau: reg?.niveau === 'Spécial' ? 'Spécial' : undefined,
     };
   });
   const dejaCommande = new Set(commandes.map((c) => cleEleve(c.enfant.nomDeFamille, c.enfant.prenom, c.enfant.niveau)));
   for (const e of registre) {
     if (dejaCommande.has(cleEleve(e.nom, e.prenom, e.niveau)) || registreApparies.has(e.id)) continue;
-    const degreReel = estClasseCombinee(e.niveau) ? degreReelParNom.get(cleNom(e.nom, e.prenom)) : undefined;
+    const degreReel = estNiveauLibre(e.niveau) ? degreReelParNom.get(cleNom(e.nom, e.prenom)) : undefined;
+    const special = e.niveau === 'Spécial';
     lignesEleves.push({
       nom: e.nom,
       prenom: e.prenom,
       // Classe combinée : le degré réel s'il est connu (inscrit sur le site)
-      niveau: degreReel && (e.niveau.match(/\d/g) ?? ([] as string[])).includes(degreReel) ? degreReel : e.niveau,
+      // (groupe Spécial : son degré réel s'il est connu, sinon son code, ex. « 751 »)
+      niveau: special ? (degreReel ?? e.niveauBrut) : degreReel && (e.niveau.match(/\d/g) ?? ([] as string[])).includes(degreReel) ? degreReel : e.niveau,
+      sectionNiveau: special ? 'Spécial' : undefined,
       groupe: e.groupe,
       allergies: e.allergie ?? '',
       fond: e.ententeAnnuelle ? MAUVE_ENTENTE : e.fondation ? ORANGE_FONDATION : null,
       cmd: null,
-      classeCombinee: estClasseCombinee(e.niveau),
+      classeCombinee: estNiveauLibre(e.niveau),
     });
   }
   const parNom = (a: LigneEleve, b: LigneEleve) => {
+    // Les adultes au bas de leur groupe (« A pour adultes au bas de ce groupe »).
+    const adulte = Number(a.niveau === 'Adulte') - Number(b.niveau === 'Adulte');
+    if (adulte !== 0) return adulte;
     const n = a.nom.localeCompare(b.nom, 'fr', { sensitivity: 'base' });
     return n !== 0 ? n : a.prenom.localeCompare(b.prenom, 'fr', { sensitivity: 'base' });
   };
@@ -279,32 +319,41 @@ export async function construireClasseurCommandes(
   // titulaires. Sans réglage : une seule liste alphabétique, comme avant.
   const services = menu.institution.servicesNiveaux.map((s) => s.split(',').map((x) => x.trim()).filter(Boolean));
   const regroupe = services.length > 0;
+  // Titre d'un service : « Niveau 1 », « Niveaux 3-4 », « Maternelle », « Adultes »,
+  // « Groupes 700 et + (et adultes) » pour le groupe Spécial.
+  const etiquette: Record<string, string> = { 'Préscolaire': 'Maternelle', 'Adulte': 'Adultes', 'Spécial': 'Groupes 700 et +' };
+  const titreService = (tokens: string[]): string => {
+    if (tokens.every((t) => /^\d$/.test(t))) return tokens.length === 1 ? `Niveau ${tokens[0]}` : `Niveaux ${tokens.join('-')}`;
+    if (tokens.includes('Spécial') && tokens.includes('Adulte')) return 'Groupes 700 et + (adultes au bas)';
+    return tokens.map((t) => etiquette[t] ?? t).join(' et ');
+  };
   type Section = { cle: string; titre: string | null; ordre: number; eleves: LigneEleve[] };
   const sections = new Map<string, Section>();
   const classer = (l: LigneEleve): Omit<Section, 'eleves'> => {
+    const nv = l.sectionNiveau ?? l.niveau;
     if (!regroupe) return { cle: 'tous', titre: null, ordre: 0 };
     // Une école qui met « Préscolaire » dans ses services (Notre-Dame-de-Liesse :
     // maternelle seule, puis 1-3-5, puis 2-4-6 — Christine, 30 octobre 2026) le
     // range à l'endroit voulu ; sinon, le préscolaire vient après les services,
     // par groupe-classe (Plein Soleil).
-    const iPre = l.niveau === 'Préscolaire' ? services.findIndex((s) => s.includes('Préscolaire')) : -1;
-    if (l.niveau === 'Préscolaire' && iPre < 0) {
+    const iPre = nv === 'Préscolaire' ? services.findIndex((s) => s.includes('Préscolaire')) : -1;
+    if (nv === 'Préscolaire' && iPre < 0) {
       return l.groupe
         ? { cle: `g:${l.groupe}`, titre: `Préscolaire ${l.groupe}`, ordre: 100 }
         : { cle: 'g:?', titre: registre.some((e) => e.groupe) ? 'Préscolaire — groupe à préciser' : 'Préscolaire', ordre: 200 };
     }
-    let i = iPre >= 0 ? iPre : services.findIndex((s) => s.includes(l.niveau));
+    let i = iPre >= 0 ? iPre : services.findIndex((s) => s.includes(nv));
     if (i < 0) {
       // Classe combinée (« 2e et 3e année », Dominique-Savio) : elle va au
       // service qui contient TOUS ses degrés ; si ses degrés sont répartis
       // sur deux services, elle reste dans « Autres niveaux ».
       // Seulement si le libellé contient des lettres : un code de groupe à
       // trois chiffres (« 123 ») n'est pas une classe combinée.
-      const degres = /[a-zé]/i.test(l.niveau) ? (l.niveau.match(/\d/g) ?? []) : [];
+      const degres = /[a-zé]/i.test(nv) ? (nv.match(/\d/g) ?? []) : [];
       if (degres.length > 0) i = services.findIndex((s) => degres.every((d) => s.includes(d)));
     }
     return i >= 0
-      ? { cle: `s:${i}`, titre: services[i].length === 1 ? (services[i][0] === 'Préscolaire' ? 'Maternelle' : services[i][0] === 'Adulte' ? 'Adultes' : `Niveau ${services[i][0]}`) : `Niveaux ${services[i].join('-')}`, ordre: i }
+      ? { cle: `s:${i}`, titre: titreService(services[i]), ordre: i }
       : { cle: 'autres', titre: 'Autres niveaux', ordre: 300 };
   };
   for (const l of lignesEleves) {
@@ -547,7 +596,7 @@ export async function construireClasseurCommandes(
 
   commandes.forEach((cmd, idx) => {
     const r = 3 + idx;
-    const allergies = [...cmd.enfant.intolerances, cmd.enfant.autreIntolerance].filter(Boolean).join(', ');
+    const allergies = texteAllergies(cmd.enfant);
     const total = cmd.lignes.reduce(
       (s, l) => s + prixLigne(l, selectionVersTexte(l.selection)), 0,
     );
