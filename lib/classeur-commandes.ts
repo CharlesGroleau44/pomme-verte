@@ -28,9 +28,9 @@
 // la prise de présence fonctionne pareil sur une liste bien plus courte.
 // Décision prise avec Charles le 12 août 2026.
 import ExcelJS from 'exceljs';
+import JSZip from 'jszip';
 import { prisma } from './prisma';
 import { jourDuMoisUTC, prixLigne, selectionVersTexte } from './menu-logic';
-import { cleEleve } from './normalisation';
 import { soldeDu } from './paiement';
 
 const LABEL_PAIEMENT: Record<string, string> = {
@@ -173,7 +173,25 @@ export async function construireClasseurCommandes(
   // TOUJOURS de la boucle des commandes réelles, qui n'appliquait jamais cette
   // couleur. cleEleve inclut le niveau (voir lib/normalisation.ts) pour ne
   // jamais confondre deux élèves homonymes de niveaux différents.
-  const registre = await prisma.eleveRegistre.findMany({ where: { institutionId: menu.institutionId } });
+  const registreBrut = await prisma.eleveRegistre.findMany({ where: { institutionId: menu.institutionId } });
+  // Certains registres n'ont pas de degrés mais des CODES DE GROUPE : à St-Pie X
+  // « 100 »…« 600 » = 1re à 6e, « 001 »/« 005 » = classes de maternelle, alors que
+  // le site utilise 1 à 6 et « Préscolaire » — les deux ne se rejoignaient jamais
+  // (doublons, N tapé à la main : Christine, 7 novembre 2026). Converti seulement
+  // pour une école dont les services sont réglés : les autres codes (Brassard :
+  // « 008 », « 751 ») gardent leur sens.
+  const normaliserCode = (niveau: string) => {
+    if (menu.institution.servicesNiveaux.length === 0) return niveau;
+    const degre = niveau.match(/^([1-6])00$/);
+    if (degre) return degre[1];
+    return /^00\d$/.test(niveau) ? 'Préscolaire' : niveau;
+  };
+  const registre = registreBrut.map((e) => ({ ...e, niveau: normaliserCode(e.niveau) }));
+  // Sans accents NI ponctuation : « L'Esperance » / « L’Esperance », « Charlie Eva »
+  // / « Charlie-Eva » (le parent et l'école ne tapent pas pareil) doivent se joindre.
+  const cleNom = (nom: string, prenom: string) =>
+    `${nom} ${prenom}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const cleEleve = (nom: string, prenom: string, niveau: string) => `${cleNom(nom, prenom)}|${niveau.trim().toLowerCase()}`;
   const registreParCle = new Map(registre.map((e) => [cleEleve(e.nom, e.prenom, e.niveau), e]));
 
   // Une seule liste d'élèves : ceux qui ont commandé en ligne ET ceux du
@@ -198,10 +216,6 @@ export async function construireClasseurCommandes(
   // sur nom+prénom quand le niveau du registre est une classe combinée qui
   // contient le degré du site.
   const estClasseCombinee = (niveau: string) => /[a-zé]/i.test(niveau) && (niveau.match(/\d/g) ?? []).length > 1;
-  // Sans accents NI ponctuation : « L'Esperance » et « L’Esperance » (apostrophe
-  // typographique tapée par le parent) doivent se rejoindre.
-  const cleNom = (nom: string, prenom: string) =>
-    `${nom} ${prenom}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
   const combineesParNom = new Map<string, (typeof registre)[number][]>();
   for (const e of registre) {
     if (!estClasseCombinee(e.niveau)) continue;
@@ -290,7 +304,7 @@ export async function construireClasseurCommandes(
       if (degres.length > 0) i = services.findIndex((s) => degres.every((d) => s.includes(d)));
     }
     return i >= 0
-      ? { cle: `s:${i}`, titre: services[i].length === 1 ? (services[i][0] === 'Préscolaire' ? 'Maternelle' : `Niveau ${services[i][0]}`) : `Niveaux ${services[i].join('-')}`, ordre: i }
+      ? { cle: `s:${i}`, titre: services[i].length === 1 ? (services[i][0] === 'Préscolaire' ? 'Maternelle' : services[i][0] === 'Adulte' ? 'Adultes' : `Niveau ${services[i][0]}`) : `Niveaux ${services[i].join('-')}`, ordre: i }
       : { cle: 'autres', titre: 'Autres niveaux', ordre: 300 };
   };
   for (const l of lignesEleves) {
@@ -469,6 +483,22 @@ export async function construireClasseurCommandes(
   cuisine.getColumn(2).width = 5.5;
   for (let c = COL_JOURS_DEBUT; c <= derniereColonne; c++) cuisine.getColumn(c).width = 3.2;
 
+  // Deux semaines visibles à l'écran, UNE SEMAINE PAR PAGE à l'impression, dans
+  // toutes les écoles (Christine, 7 novembre 2026) : saut de page vertical entre
+  // les semaines, et le nom + N répétés sur chaque page.
+  const lundiDe = (d: Date) => iso(new Date(d.getTime() - ((d.getUTCDay() + 6) % 7) * 86400000));
+  const joursParSemaine = new Map<string, number>();
+  const ruptureColonnes: number[] = []; // ExcelJS ne sait pas poser de saut de page vertical : voir plus bas
+  journees.forEach((j, i) => {
+    const sem = lundiDe(j.date);
+    joursParSemaine.set(sem, (joursParSemaine.get(sem) ?? 0) + 1);
+    if (i > 0 && sem !== lundiDe(journees[i - 1].date)) ruptureColonnes.push(COL_JOURS_DEBUT + i * COLS_PAR_JOUR - 1);
+  });
+  // Échelle : une semaine (≤ 5 jours) est étroite, on grossit les caractères
+  // jusqu'à 90 % ; au-delà de la largeur imprimable (≈ 7,55 po), on réduit.
+  const largeurPx = 28 * 7 + 5 + (5.5 * 7 + 5) + Math.max(...joursParSemaine.values(), 1) * COLS_PAR_JOUR * (3.2 * 7 + 5);
+  const echelle = Math.max(50, Math.min(90, Math.floor(((7.55 * 96) / largeurPx) * 100)));
+
   cuisine.pageSetup = {
     paperSize: 1 as ExcelJS.PaperSize, // Letter, 8,5 × 11 po
     orientation: 'portrait',
@@ -478,10 +508,11 @@ export async function construireClasseurCommandes(
     // 66 % : 10 journées × 3 colonnes + nom + N font ≈ 11,1 po à 100 %, pour
     // 7,7 po imprimables (marges de 0,4 po).
     fitToPage: false,
-    scale: 66,
+    scale: echelle,
     horizontalCentered: true,
     margins: { left: 0.4, right: 0.4, top: 0.55, bottom: 0.6, header: 0.25, footer: 0.3 },
     printTitlesRow: '2:3', // entêtes des jours répétés sur chaque page
+    printTitlesColumn: 'A:B', // nom + N répétés sur la page de la 2e semaine
   };
   cuisine.headerFooter.oddFooter = '&L&8&A&C&8Page &P de &N&R&8Imprimé le &D';
 
@@ -570,7 +601,8 @@ export async function construireClasseurCommandes(
     printTitlesRow: '2:2',
   };
 
-  const buffer = (await classeur.xlsx.writeBuffer()) as ArrayBuffer;
+  let buffer = (await classeur.xlsx.writeBuffer()) as ArrayBuffer;
+  if (ruptureColonnes.length > 0) buffer = await ajouterRupturesColonnes(buffer, ruptureColonnes);
   const nomFichier = `${menu.institution.nom} - ${menu.thematiqueRef?.nom ?? 'Menu'} - ${fmtFichier(menu.periodeDebut)}.xlsx`
     .replace(/[/\\?%*:|"<>]/g, '-');
   return { buffer, nomFichier };
@@ -578,9 +610,35 @@ export async function construireClasseurCommandes(
 
 // « 2e et 3e année » → « 2-3 » : la colonne N ne fait que 5,5 caractères.
 function niveauAbrege(niveau: string): string {
+  if (niveau === 'Adulte') return 'A'; // « A pour Adulte » (Christine, St-Pie X)
   if (/^\d$/.test(niveau) || niveau.length <= 5) return niveau;
   const degres = niveau.match(/\d/g);
   return degres && degres.length > 1 ? degres.join('-') : niveau;
+}
+
+/**
+ * Insère <colBreaks> dans la 1re feuille (Cuisine) du classeur : saut de page
+ * vertical APRÈS chacune des colonnes données (numéros de colonne à partir de 1).
+ * Placé après rowBreaks (ou headerFooter), comme l'exige le schéma OOXML.
+ */
+async function ajouterRupturesColonnes(buffer: ArrayBuffer, colonnes: number[]): Promise<ArrayBuffer> {
+  const zip = await JSZip.loadAsync(buffer);
+  const chemin = 'xl/worksheets/sheet1.xml';
+  const xml = await zip.file(chemin)!.async('string');
+  const brk = colonnes.map((c) => `<brk id="${c}" max="1048575" man="1"/>`).join('');
+  const bloc = `<colBreaks count="${colonnes.length}" manualBreakCount="${colonnes.length}">${brk}</colBreaks>`;
+  const apres = ['</rowBreaks>', '</headerFooter>', '<headerFooter']
+    .map((m) => ({ m, i: xml.lastIndexOf(m) }))
+    .find((x) => x.i >= 0);
+  if (!apres) return buffer;
+  // Après </rowBreaks> ou </headerFooter> : juste derrière la balise fermante.
+  const fin = apres.m.startsWith('</') ? apres.i + apres.m.length : xml.indexOf('>', apres.i) + 1;
+  zip.file(chemin, xml.slice(0, fin) + bloc + xml.slice(fin));
+  return zip.generateAsync({ type: 'arraybuffer' });
+}
+
+function iso(d: Date): string {
+  return d.toISOString().slice(0, 10);
 }
 
 function fmt(d: Date): string {
