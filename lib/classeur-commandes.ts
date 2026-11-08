@@ -212,7 +212,8 @@ export async function construireClasseurCommandes(
     groupe: string | null;
     allergies: string;
     fond: string | null;
-    cmd: (typeof commandes)[number] | null;
+    /** Commandes de cet élève (plusieurs si ses parents ont chacun un compte : voir plus bas). */
+    cmds: (typeof commandes)[number][];
     /** Élève d'une classe combinée (« 2e et 3e année ») : son degré réel est mis en évidence. */
     classeCombinee: boolean;
     /** Niveau servant à ranger la ligne dans un service, si différent du niveau affiché (groupe Spécial). */
@@ -271,7 +272,19 @@ export async function construireClasseurCommandes(
     const memeNom = (registreParNom.get(cleNom(nom, '')) ?? []).filter((e) => cleNom(e.nom, e.prenom) === cleNom(nom, prenom));
     return memeNom.length === 1 && !registreApparies.has(memeNom[0].id) ? memeNom[0] : undefined;
   };
-  const lignesEleves: LigneEleve[] = commandes.map((cmd) => {
+  // Un même enfant peut avoir deux fiches sur le site quand ses parents ne se
+  // parlent pas et ont chacun leur compte (Abie Côté, St-Pie X : le père paie à
+  // l'année, la mère à chaque commande — Christine, 8 novembre 2026). Dans la
+  // LISTE de la cuisine il n'est qu'UNE ligne, avec les jours des deux comptes ;
+  // les comptes et les paiements restent séparés (onglet Détail : une ligne par
+  // commande, avec son parent).
+  const parEnfant = new Map<string, (typeof commandes)[number][]>();
+  for (const cmd of commandes) {
+    const k = cleEleve(cmd.enfant.nomDeFamille, cmd.enfant.prenom, cmd.enfant.niveau);
+    parEnfant.set(k, [...(parEnfant.get(k) ?? []), cmd]);
+  }
+  const lignesEleves: LigneEleve[] = [...parEnfant.values()].map((groupe) => {
+    const cmd = groupe[0];
     const reg = trouverRegistre(cmd.enfant.nomDeFamille, cmd.enfant.prenom, cmd.enfant.niveau);
     if (reg) registreApparies.add(reg.id);
     return {
@@ -279,9 +292,9 @@ export async function construireClasseurCommandes(
       prenom: cmd.enfant.prenom,
       niveau: cmd.enfant.niveau,
       groupe: reg?.groupe ?? null,
-      allergies: texteAllergies(cmd.enfant),
+      allergies: [...new Set(groupe.map((c) => texteAllergies(c.enfant)).filter(Boolean))].join(', '),
       fond: reg ? (reg.ententeAnnuelle ? MAUVE_ENTENTE : reg.fondation ? ORANGE_FONDATION : null) : null,
-      cmd,
+      cmds: groupe,
       classeCombinee: !!reg && estNiveauLibre(reg.niveau),
       sectionNiveau: reg?.niveau === 'Spécial' ? 'Spécial' : undefined,
     };
@@ -301,7 +314,7 @@ export async function construireClasseurCommandes(
       groupe: e.groupe,
       allergies: e.allergie ?? '',
       fond: e.ententeAnnuelle ? MAUVE_ENTENTE : e.fondation ? ORANGE_FONDATION : null,
-      cmd: null,
+      cmds: [],
       classeCombinee: estNiveauLibre(e.niveau),
     });
   }
@@ -425,15 +438,12 @@ export async function construireClasseurCommandes(
       celN.alignment = { horizontal: 'center' };
       celN.font = { size: 9 };
       bordureLigne(r, l.fond);
-      if (l.classeCombinee) {
-        // Degré réel d'un élève de classe combinée : fond rose, texte mauve
-        // (la façon dont Christine le marque sur sa liste). Le degré vient du
-        // site quand le parent a inscrit l'enfant ; sinon « 2-3 ».
-        celN.font = { size: 9, bold: true, color: { argb: 'FF7030A0' } };
-        celN.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7E6' } };
-      }
 
-      for (const ligne of l.cmd?.lignes ?? []) {
+      // Deux fiches du même enfant commandant le même jour : une seule case.
+      const joursVus = new Set<string>();
+      for (const ligne of l.cmds.flatMap((c) => c.lignes)) {
+        if (joursVus.has(ligne.journeeId)) continue;
+        joursVus.add(ligne.journeeId);
         const iJour = journees.findIndex((j) => j.id === ligne.journeeId);
         if (iJour < 0) continue;
         // « M1 » = la 1re sélection de la journée, « M2 » = la 2e. C'est
