@@ -188,9 +188,45 @@ export async function construireClasseurCommandes(
     allergies: string;
     fond: string | null;
     cmd: (typeof commandes)[number] | null;
+    /** Élève d'une classe combinée (« 2e et 3e année ») : son degré réel est mis en évidence. */
+    classeCombinee: boolean;
+  };
+  // Classe combinée (« 2e et 3e année », Dominique-Savio) : le registre garde
+  // le libellé de la classe, mais le parent choisit le degré RÉEL de son enfant
+  // (2 ou 3) — la clé nom+prénom+niveau ne se rejoignait donc jamais et chaque
+  // élève apparaissait deux fois (Christine, 7 novembre 2026). On apparie ici
+  // sur nom+prénom quand le niveau du registre est une classe combinée qui
+  // contient le degré du site.
+  const estClasseCombinee = (niveau: string) => /[a-zé]/i.test(niveau) && (niveau.match(/\d/g) ?? []).length > 1;
+  // Sans accents NI ponctuation : « L'Esperance » et « L’Esperance » (apostrophe
+  // typographique tapée par le parent) doivent se rejoindre.
+  const cleNom = (nom: string, prenom: string) =>
+    `${nom} ${prenom}`.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+  const combineesParNom = new Map<string, (typeof registre)[number][]>();
+  for (const e of registre) {
+    if (!estClasseCombinee(e.niveau)) continue;
+    const k = cleNom(e.nom, e.prenom);
+    combineesParNom.set(k, [...(combineesParNom.get(k) ?? []), e]);
+  }
+  // Degré réel d'un élève de classe combinée qui n'a PAS commandé ce menu : on
+  // le lit dans sa fiche d'inscription sur le site (Enfant), commande ou non.
+  const degreReelParNom = new Map<string, string>();
+  if (combineesParNom.size > 0) {
+    const inscrits = await prisma.enfant.findMany({
+      where: { institutionId: menu.institutionId },
+      select: { nomDeFamille: true, prenom: true, niveau: true },
+    });
+    for (const e of inscrits) degreReelParNom.set(cleNom(e.nomDeFamille, e.prenom), e.niveau);
+  }
+  const registreApparies = new Set<string>();
+  const trouverRegistre = (nom: string, prenom: string, niveau: string) => {
+    const exact = registreParCle.get(cleEleve(nom, prenom, niveau));
+    if (exact) return exact;
+    return (combineesParNom.get(cleNom(nom, prenom)) ?? []).find((e) => (e.niveau.match(/\d/g) ?? ([] as string[])).includes(niveau));
   };
   const lignesEleves: LigneEleve[] = commandes.map((cmd) => {
-    const reg = registreParCle.get(cleEleve(cmd.enfant.nomDeFamille, cmd.enfant.prenom, cmd.enfant.niveau));
+    const reg = trouverRegistre(cmd.enfant.nomDeFamille, cmd.enfant.prenom, cmd.enfant.niveau);
+    if (reg) registreApparies.add(reg.id);
     return {
       nom: cmd.enfant.nomDeFamille,
       prenom: cmd.enfant.prenom,
@@ -199,19 +235,23 @@ export async function construireClasseurCommandes(
       allergies: [...cmd.enfant.intolerances, cmd.enfant.autreIntolerance].filter(Boolean).join(', '),
       fond: reg ? (reg.ententeAnnuelle ? MAUVE_ENTENTE : reg.fondation ? ORANGE_FONDATION : null) : null,
       cmd,
+      classeCombinee: !!reg && estClasseCombinee(reg.niveau),
     };
   });
   const dejaCommande = new Set(commandes.map((c) => cleEleve(c.enfant.nomDeFamille, c.enfant.prenom, c.enfant.niveau)));
   for (const e of registre) {
-    if (dejaCommande.has(cleEleve(e.nom, e.prenom, e.niveau))) continue;
+    if (dejaCommande.has(cleEleve(e.nom, e.prenom, e.niveau)) || registreApparies.has(e.id)) continue;
+    const degreReel = estClasseCombinee(e.niveau) ? degreReelParNom.get(cleNom(e.nom, e.prenom)) : undefined;
     lignesEleves.push({
       nom: e.nom,
       prenom: e.prenom,
-      niveau: e.niveau,
+      // Classe combinée : le degré réel s'il est connu (inscrit sur le site)
+      niveau: degreReel && (e.niveau.match(/\d/g) ?? ([] as string[])).includes(degreReel) ? degreReel : e.niveau,
       groupe: e.groupe,
       allergies: e.allergie ?? '',
       fond: e.ententeAnnuelle ? MAUVE_ENTENTE : e.fondation ? ORANGE_FONDATION : null,
       cmd: null,
+      classeCombinee: estClasseCombinee(e.niveau),
     });
   }
   const parNom = (a: LigneEleve, b: LigneEleve) => {
@@ -322,6 +362,13 @@ export async function construireClasseurCommandes(
       celN.alignment = { horizontal: 'center' };
       celN.font = { size: 9 };
       bordureLigne(r, l.fond);
+      if (l.classeCombinee) {
+        // Degré réel d'un élève de classe combinée : fond rose, texte mauve
+        // (la façon dont Christine le marque sur sa liste). Le degré vient du
+        // site quand le parent a inscrit l'enfant ; sinon « 2-3 ».
+        celN.font = { size: 9, bold: true, color: { argb: 'FF7030A0' } };
+        celN.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFFFC7E6' } };
+      }
 
       for (const ligne of l.cmd?.lignes ?? []) {
         const iJour = journees.findIndex((j) => j.id === ligne.journeeId);
